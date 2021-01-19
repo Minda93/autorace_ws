@@ -1,0 +1,13 @@
+.vscode/
+.catkin_workspace
+__pycache__/
+
+# ros1
+#build/
+#devel/
+
+# ros2
+build/
+install/
+log/
+#ros1_bridge/
