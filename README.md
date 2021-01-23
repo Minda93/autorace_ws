@@ -2,6 +2,7 @@
 
 - [autorace_ws](#autorace_ws)
 - [1. Environment](#1-environment)
+- [setup env](#setup-env)
 - [Bug](#bug)
 - [Reference](#reference)
 
@@ -25,6 +26,13 @@ ros2 practice 2
 | turtlebot3_simulation complex model | 58b752a6ac commit |
 | turtlebot3_simulation autorace_2020 | master            |
 
+# setup env
+
+* download turtlebot3_custom   
+```bash
+  $ cd <autorace_ws>/src
+  $ ./turtlebot3_custom.sh
+```
 
 # Bug  
   * gazebo_ros_pkgs(ros2 branch) compile error (source foxy-release_4)
