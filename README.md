@@ -3,6 +3,7 @@
 - [autorace_ws](#autorace_ws)
 - [1. Environment](#1-environment)
 - [2. Setup env](#2-setup-env)
+- [TODO](#todo)
 - [Bug](#bug)
 - [Reference](#reference)
 
@@ -33,6 +34,13 @@ ros2 practice 2
   $ cd <autorace_ws>/src
   $ ./turtlebot3_custom.sh
 ```
+
+# TODO 
+* env_control
+  - [ ] traffic light
+  - [ ] traffic bar
+* detect_object
+  - [x] detect_lane
 
 # Bug  
   * gazebo_ros_pkgs(ros2 branch) compile error (source foxy-release_4)
