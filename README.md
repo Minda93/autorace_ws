@@ -2,7 +2,7 @@
 
 - [autorace_ws](#autorace_ws)
 - [1. Environment](#1-environment)
-- [setup env](#setup-env)
+- [2. Setup env](#2-setup-env)
 - [Bug](#bug)
 - [Reference](#reference)
 
@@ -26,7 +26,7 @@ ros2 practice 2
 | turtlebot3_simulation complex model | 58b752a6ac commit |
 | turtlebot3_simulation autorace_2020 | master            |
 
-# setup env
+# 2. Setup env
 
 * download turtlebot3_custom   
 ```bash
