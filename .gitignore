@@ -1,6 +1,7 @@
 .vscode/
 .catkin_workspace
 __pycache__/
+*.zip
 
 # ros1
 #build/
