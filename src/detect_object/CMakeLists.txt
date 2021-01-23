@@ -15,12 +15,57 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+################################################################################
+# Find ament packages and libraries for ament and system dependencies
+################################################################################
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
+
+################################################################################
+# Build
+################################################################################
+
+include_directories(include)
+
+# add_library(detect_lib SHARED)
+# target_link_libraries(cartpole_controller cartpole_controller_lib)
+
+add_library(detect_lane SHARED
+  src/detect_lane.cpp)
+target_compile_definitions(detect_lane 
+  PRIVATE "DETECT_OBJECT_BUILDING_DLL")
+ament_target_dependencies(detect_lane
+  "rclcpp"
+  "rclcpp_components"
+  "sensor_msgs"
+  "OpenCV")
+rclcpp_components_register_nodes(detect_lane "detect_object::DetectLane")
+
+################################################################################
+# Install
+################################################################################
+
+# add the install(TARGETS…) section so ros2 can find your component
+install(TARGETS
+  detect_lane
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(
+  DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+################################################################################
+# TEST
+################################################################################
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -32,5 +77,9 @@ if(BUILD_TESTING)
   #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+################################################################################
+# Macro for ament package
+################################################################################
 
 ament_package()
