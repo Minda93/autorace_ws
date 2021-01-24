@@ -6,6 +6,9 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
+#include <string>
+#include <vector>
+
 namespace cam_tools
 {
   class CamCalibration : public rclcpp::Node 
@@ -15,8 +18,16 @@ namespace cam_tools
     ~CamCalibration() = default;
   
   private:
-    
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
+    bool help(const std::vector<std::string> args);
+    void parse_parameters();
+
+    void load_image_lists();
+    // cv::Mat image_calibration(cv::Mat &src);
+
+  private:
+    std::string imagesPath_;
+    std::vector<std::string> imageLists_;
+
   }; // class CamCalibration
 } // namespace cam_tools
 

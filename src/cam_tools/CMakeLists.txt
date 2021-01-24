@@ -38,7 +38,7 @@ include_directories(include)
 add_library(cam_calibration SHARED
   src/cam_calibration.cpp)
 target_compile_definitions(cam_calibration 
-  PRIVATE "DETECT_OBJECT_BUILDING_DLL")
+  PRIVATE "CAM_TOOLS_BUILDING_DLL")
 ament_target_dependencies(cam_calibration
   "rclcpp"
   "rclcpp_components"
