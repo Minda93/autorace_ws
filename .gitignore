@@ -2,6 +2,7 @@
 .catkin_workspace
 __pycache__/
 *.zip
+*.png
 
 # ros1
 #build/

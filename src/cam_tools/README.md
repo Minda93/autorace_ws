@@ -21,14 +21,14 @@
       
       ```txt
         <pkg_of_cam_tools>/
-          <config>/
+          config/
             <TURTLEBOT3_MODEL>/
             <TURTLEBOT3_MODEL>.config
       ```        
     * config file format  
       ```text
       image1.png
-      image2.png  
+      image2.png
       ```
 
 # 3. Get chess board's images
