@@ -41,6 +41,7 @@
 ```
       
 # TODO  
-* cam_calibration
+* cam_calibration (bug)
   - [x] ~~get path of the images file~~
   - [x] process
+  - [x] config file and test pictures (google drive)

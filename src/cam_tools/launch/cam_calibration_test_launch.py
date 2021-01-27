@@ -27,10 +27,10 @@ def generate_launch_description():
       ComposableNode(
         package='cam_tools',
         plugin='cam_tools::CamCalibration',
-        parameters=[{
-          "images_path": os.path.join(
-            pkgsPath.find("cam_tools"),"config", TURTLEBOT3_MODEL+".config"),
-        }],
+        parameters=[
+          os.path.join(
+            pkgsPath.find("cam_tools"),"config","cam_calibration_component.yaml"),
+        ],
         name='cam_calibration')
     ],
     output='screen',
