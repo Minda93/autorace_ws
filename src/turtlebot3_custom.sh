@@ -1,7 +1,7 @@
 #!/bin/sh
 
-model_folder="turtlebot3_ver_0_2"
-file_id="1k7LxvUcP8yEql3D8JL5l_INmRi6pr3q8"
+model_folder="turtlebot3_ver_0_3"
+file_id="1kzoKzVoB5ctvGR7Q1BT5qEWwwiBI_76J"
 
 # download model from google drvie
 curl -sc /tmp/cookie "https://drive.google.com/uc?export=download&id=${file_id}" > /dev/null
