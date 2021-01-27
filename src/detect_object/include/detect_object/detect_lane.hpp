@@ -9,6 +9,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 #include <memory>
+#include <string>
 
 namespace detect_object
 {
@@ -17,11 +18,30 @@ namespace detect_object
   public:
     explicit DetectLane(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
     ~DetectLane() = default;
+
+    void image_show(const cv::Mat &src, bool showImage);
+    void process();
   
   private:
-    DetectLaneParam config_;
+    // init param
+    void parse_parameters();
+
+    // subscribe image
+    void image_callback(const sensor_msgs::msg::Image::SharedPtr msg);
+
+    // encoding image to mat type
+    int encoding2mat_type(const std::string encoding);
+
+  private:
+    // param
+    DetectLaneParam cfg_;
     BaseMode mode_;
+    cv::Mat src_;
+
+    // time
+    rclcpp::TimerBase::SharedPtr startTimer_;
     
+    // topic 
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
   };
 } // class DetectLane

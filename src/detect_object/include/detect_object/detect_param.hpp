@@ -4,7 +4,7 @@
 namespace detect_object
 {
   enum BaseMode{
-    IDLE,
+    INIT,
     INACTIVE,
     START_UP,
     FINISH
@@ -12,7 +12,7 @@ namespace detect_object
 
   struct DetectLaneParam
   {
-
+    bool showImage;
   }; // struct DetectLaneParam
 } // detect_object
 
