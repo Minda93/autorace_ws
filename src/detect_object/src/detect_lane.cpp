@@ -44,10 +44,36 @@ namespace detect_object
   {
     this->declare_parameter<bool>("show_image", true);
 
+    // Perspective Transform param
+    this->declare_parameter<float>("top_x", 70);
+    this->declare_parameter<float>("top_y", -40);
+    this->declare_parameter<float>("bottom_x", 330);
+    this->declare_parameter<float>("bottom_y", 240);
+
     get_parameter_or<bool>(
       "show_image",
       cfg_.showImage,
       true);
+    
+    get_parameter_or<float>(
+      "top_x",
+      cfg_.birdView.top_x,
+      70);
+    
+    get_parameter_or<float>(
+      "top_y",
+      cfg_.birdView.top_y,
+      -40);
+    
+    get_parameter_or<float>(
+      "bottom_x",
+      cfg_.birdView.bottom_x,
+      330);
+    
+    get_parameter_or<float>(
+      "bottom_y",
+      cfg_.birdView.bottom_y,
+      240);
   }
 
   void DetectLane::image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -90,6 +116,8 @@ namespace detect_object
   {
     if(showImage && !src.empty()){
       cv::imshow("Detect Lane Image", src);
+      
+      // esc keyboard key = 27
       if(cv::waitKey(3) == 27)
       {
         rclcpp::shutdown();
@@ -97,9 +125,46 @@ namespace detect_object
     }
   }
 
-  void DetectLane::process()
+  void DetectLane::homography_transform_process()
   {
-    image_show(src_, cfg_.showImage);
+    if(!src_.empty())
+    {
+      // src size(640, 480)
+    cv::Point2f centerPoint{src_.size()/2};
+    cv::Point2f srcVertices[4]{
+      {centerPoint.x - cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
+      {centerPoint.x + cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
+      {centerPoint.x + cfg_.birdView.bottom_x, centerPoint.y + cfg_.birdView.bottom_y},
+      {centerPoint.x - cfg_.birdView.bottom_x, centerPoint.y + cfg_.birdView.bottom_y}
+    };
+
+    // dst size(250, 300)
+    // [200, 0], [800, 0], [800, 600], [200, 600]
+    cv::Point2f dstVertices[4]{
+      {50, 0},
+      {200, 0},
+      {200, 300},
+      {50, 300}
+    };
+
+    // draw line for bird view
+    for(int idx{0}; idx < 4; ++idx)
+    {
+      cv::line( src_, srcVertices[idx], srcVertices[(idx+1)%4], cv::Scalar( 255, 0, 0 ), 3, cv::LINE_8);
+    }
+
+    cv::Mat perspectiveMatrix{getPerspectiveTransform(srcVertices, dstVertices)};
+    cv::warpPerspective(
+      src_, dst_, perspectiveMatrix,
+      cv::Size(250, 300), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+    }
+  }
+
+  void DetectLane::process()
+  { 
+    homography_transform_process();
+    image_show(dst_, cfg_.showImage);
+    // image_show(src_, cfg_.showImage);
   }
 } // detect_object
 

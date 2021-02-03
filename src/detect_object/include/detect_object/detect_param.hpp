@@ -10,9 +10,18 @@ namespace detect_object
     FINISH
   };
 
+  struct PerspectiveParam
+  {
+    float top_x;
+    float top_y;
+    float bottom_x;
+    float bottom_y;
+  };
+
   struct DetectLaneParam
   {
     bool showImage;
+    PerspectiveParam birdView;
   }; // struct DetectLaneParam
 } // detect_object
 

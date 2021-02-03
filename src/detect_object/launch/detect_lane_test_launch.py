@@ -25,6 +25,7 @@ def generate_launch_description():
       ComposableNode(
         package='detect_object',
         plugin='detect_object::DetectLane',
+        parameters=[{"use_sim_time": True}],
         name='detect_lane')
     ],
     output='screen',

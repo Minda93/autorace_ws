@@ -1,0 +1,8 @@
+detect_lane:
+  ros__parameters:
+    bottom_x: 330.0
+    bottom_y: 240.0
+    show_image: true
+    top_x: 70.0
+    top_y: -40.0
+    use_sim_time: true

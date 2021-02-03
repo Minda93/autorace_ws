@@ -32,11 +32,16 @@ namespace detect_object
     // encoding image to mat type
     int encoding2mat_type(const std::string encoding);
 
+    // process
+    cv::Mat draw_perspective_line();
+    void homography_transform_process();
+
   private:
     // param
     DetectLaneParam cfg_;
     BaseMode mode_;
     cv::Mat src_;
+    cv::Mat dst_;
 
     // time
     rclcpp::TimerBase::SharedPtr startTimer_;
