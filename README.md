@@ -16,7 +16,7 @@ ros2 practice 2
 
 | names                               | version           |
 | ---                                 | ---               |
-| gazebo                              | 11.1.0            |
+| gazebo                              | 11.3.0            |
 | CMake                               | 3.18.4            |
 | ros2                                | foxy-release_4    |
 | gazebo_ros_pkgs                     | ros2              |
