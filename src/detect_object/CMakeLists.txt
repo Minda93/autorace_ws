@@ -32,11 +32,15 @@ find_package(OpenCV REQUIRED)
 
 include_directories(include)
 
-# add_library(detect_lib SHARED)
-# target_link_libraries(cartpole_controller cartpole_controller_lib)
+add_library(detect_object_lib SHARED
+  src/interface/interface.cpp
+  src/interface/interface_templates.cpp)
+ament_target_dependencies(detect_object_lib
+  "rclcpp")
 
 add_library(detect_lane SHARED
   src/detect_lane.cpp)
+target_link_libraries(detect_lane detect_object_lib)
 target_compile_definitions(detect_lane 
   PRIVATE "DETECT_OBJECT_BUILDING_DLL")
 ament_target_dependencies(detect_lane

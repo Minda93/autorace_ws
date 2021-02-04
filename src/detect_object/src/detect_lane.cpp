@@ -1,4 +1,5 @@
 #include "detect_object/detect_lane.hpp"
+#include "detect_object/interface/interface.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
@@ -44,10 +45,24 @@ namespace detect_object
   {
     this->declare_parameter<bool>("show_image", true);
 
+    // Perspective Transform param (slider bar)
+    // this->declare_parameter<float>(
+    //   "top_x", 70, 
+    //   interface::set_num_range<double>("top_x", interface::DOUBLE, -320.0, 320.0, 1.0));
+    // this->declare_parameter<float>(
+    //   "top_y", -40, 
+    //   interface::set_num_range<double>("top_y", interface::DOUBLE, -240.0, 240.0, 1.0));
+    // this->declare_parameter<float>(
+    //   "bottom_x", 320, 
+    //   interface::set_num_range<double>("bottom_x", interface::DOUBLE, -320.0, 320.0, 1.0));
+    // this->declare_parameter<float>(
+    //   "bottom_y", 240, 
+    //   interface::set_num_range<double>("bottom_y", interface::DOUBLE, -240.0, 240.0, 1.0));
+    
     // Perspective Transform param
     this->declare_parameter<float>("top_x", 70);
     this->declare_parameter<float>("top_y", -40);
-    this->declare_parameter<float>("bottom_x", 330);
+    this->declare_parameter<float>("bottom_x", 320);
     this->declare_parameter<float>("bottom_y", 240);
 
     get_parameter_or<bool>(
@@ -68,7 +83,7 @@ namespace detect_object
     get_parameter_or<float>(
       "bottom_x",
       cfg_.birdView.bottom_x,
-      330);
+      320);
     
     get_parameter_or<float>(
       "bottom_y",
@@ -130,12 +145,12 @@ namespace detect_object
     if(!src_.empty())
     {
       // src size(640, 480)
-    cv::Point2f centerPoint{src_.size()/2};
-    cv::Point2f srcVertices[4]{
-      {centerPoint.x - cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
-      {centerPoint.x + cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
-      {centerPoint.x + cfg_.birdView.bottom_x, centerPoint.y + cfg_.birdView.bottom_y},
-      {centerPoint.x - cfg_.birdView.bottom_x, centerPoint.y + cfg_.birdView.bottom_y}
+      cv::Point2f centerPoint{src_.size()/2};
+      cv::Point2f srcVertices[4]{
+        {centerPoint.x - cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
+        {centerPoint.x + cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
+        {centerPoint.x + cfg_.birdView.bottom_x, centerPoint.y + cfg_.birdView.bottom_y},
+        {centerPoint.x - cfg_.birdView.bottom_x, centerPoint.y + cfg_.birdView.bottom_y}
     };
 
     // dst size(250, 300)
@@ -148,10 +163,10 @@ namespace detect_object
     };
 
     // draw line for bird view
-    for(int idx{0}; idx < 4; ++idx)
-    {
-      cv::line( src_, srcVertices[idx], srcVertices[(idx+1)%4], cv::Scalar( 255, 0, 0 ), 3, cv::LINE_8);
-    }
+    // for(int idx{0}; idx < 4; ++idx)
+    // {
+    //   cv::line( src_, srcVertices[idx], srcVertices[(idx+1)%4], cv::Scalar( 255, 0, 0 ), 3, cv::LINE_8);
+    // }
 
     cv::Mat perspectiveMatrix{getPerspectiveTransform(srcVertices, dstVertices)};
     cv::warpPerspective(
@@ -160,10 +175,44 @@ namespace detect_object
     }
   }
 
+  void DetectLane::detect_lane()
+  {
+    cv::Mat mask;
+    cv::Mat maskYellow;
+    cv::Mat maskWhite;
+    cv::Mat hsv;
+
+    cv::cvtColor(dst_, hsv, cv::COLOR_BGR2HSV);
+
+    cv::inRange(
+      hsv,
+      cv::Scalar(27, 130, 160), 
+      cv::Scalar(41, 255, 255), 
+      maskYellow
+    );
+
+    cv::inRange(
+      hsv,
+      cv::Scalar(0, 0, 180), 
+      cv::Scalar(25, 36, 255), 
+      maskWhite
+    );
+
+    cv::bitwise_or(maskYellow, maskWhite, mask);
+
+    // show color result
+    cv::Mat test{cv::Mat::zeros(dst_.size(), dst_.type())};
+    cv::bitwise_and(dst_, dst_, test, mask);
+    image_show(test, cfg_.showImage);
+  }
+
   void DetectLane::process()
   { 
-    homography_transform_process();
-    image_show(dst_, cfg_.showImage);
+    if(!src_.empty()){
+      homography_transform_process();
+      detect_lane();
+    }
+    // image_show(dst_, cfg_.showImage);
     // image_show(src_, cfg_.showImage);
   }
 } // detect_object

@@ -33,8 +33,8 @@ namespace detect_object
     int encoding2mat_type(const std::string encoding);
 
     // process
-    cv::Mat draw_perspective_line();
     void homography_transform_process();
+    void detect_lane();
 
   private:
     // param

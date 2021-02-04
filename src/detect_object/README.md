@@ -17,6 +17,7 @@
       * param 
       ```yaml
         # Perspective Transform param
+        # src size(640, 480)
         bottom_x: 330.0
         bottom_y: 240.0
         top_x: 70.0
@@ -31,6 +32,8 @@
     
 # TODO  
 * detect_lane
+  * param slider bar(~~int~~, ~~double~~, int_array, double_array)
+    - [x] for detect_lane hsv bar (yellow, white)
   - [x] Perspective Transform
   - [x] Lane-line pixel identification
 
