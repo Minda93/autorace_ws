@@ -33,20 +33,20 @@
       * param
       ``` yaml
         hsv_model:
-        white:
-          hue_h: 25
-          hue_l: 0
-          saturation_h: 36
-          saturation_l: 0
-          value_h: 255
-          value_l: 180
-        yellow:
-          hue_h: 41
-          hue_l: 27
-          saturation_h: 255
-          saturation_l: 130
-          value_h: 255
-          value_l: 160
+          white:
+            hue_h: 25
+            hue_l: 0
+            saturation_h: 36
+            saturation_l: 0
+            value_h: 255
+            value_l: 180
+          yellow:
+            hue_h: 41
+            hue_l: 27
+            saturation_h: 255
+            saturation_l: 130
+            value_h: 255
+            value_l: 160
       ```
     
 # TODO  
