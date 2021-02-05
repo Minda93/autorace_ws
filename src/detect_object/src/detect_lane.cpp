@@ -45,25 +45,50 @@ namespace detect_object
   {
     this->declare_parameter<bool>("show_image", true);
 
-    // Perspective Transform param (slider bar)
-    // this->declare_parameter<float>(
-    //   "top_x", 70, 
-    //   interface::set_num_range<double>("top_x", interface::DOUBLE, -320.0, 320.0, 1.0));
-    // this->declare_parameter<float>(
-    //   "top_y", -40, 
-    //   interface::set_num_range<double>("top_y", interface::DOUBLE, -240.0, 240.0, 1.0));
-    // this->declare_parameter<float>(
-    //   "bottom_x", 320, 
-    //   interface::set_num_range<double>("bottom_x", interface::DOUBLE, -320.0, 320.0, 1.0));
-    // this->declare_parameter<float>(
-    //   "bottom_y", 240, 
-    //   interface::set_num_range<double>("bottom_y", interface::DOUBLE, -240.0, 240.0, 1.0));
-    
     // Perspective Transform param
     this->declare_parameter<float>("top_x", 70);
     this->declare_parameter<float>("top_y", -40);
     this->declare_parameter<float>("bottom_x", 320);
     this->declare_parameter<float>("bottom_y", 240);
+
+    // color model
+    this->declare_parameter<int>(
+      "hsv_model.yellow.hue_l", 27,
+      interface::set_num_range<double>("hsv_model.yellow.hue_l", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.yellow.saturation_l", 130,
+      interface::set_num_range<double>("hsv_model.yellow.saturation_l", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.yellow.value_l", 160,
+      interface::set_num_range<double>("hsv_model.yellow.value_l", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.yellow.hue_h", 41,
+      interface::set_num_range<double>("hsv_model.yellow.hue_h", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.yellow.saturation_h", 255,
+      interface::set_num_range<double>("hsv_model.yellow.saturation_h", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.yellow.value_h", 255,
+      interface::set_num_range<double>("hsv_model.yellow.value_h", interface::INTEGER, 0, 255, 1));
+
+    this->declare_parameter<int>(
+      "hsv_model.white.hue_l", 0,
+      interface::set_num_range<double>("hsv_model.white.hue_l", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.white.saturation_l", 0,
+      interface::set_num_range<double>("hsv_model.white.saturation_l", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.white.value_l", 180,
+      interface::set_num_range<double>("hsv_model.white.value_l", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.white.hue_h", 25,
+      interface::set_num_range<double>("hsv_model.white.hue_h", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.white.saturation_h", 36,
+      interface::set_num_range<double>("hsv_model.white.saturation_h", interface::INTEGER, 0, 255, 1));
+    this->declare_parameter<int>(
+      "hsv_model.white.value_h", 255,
+      interface::set_num_range<double>("hsv_model.white.value_h", interface::INTEGER, 0, 255, 1));
 
     get_parameter_or<bool>(
       "show_image",
@@ -89,6 +114,34 @@ namespace detect_object
       "bottom_y",
       cfg_.birdView.bottom_y,
       240);
+    
+    // maybe have better method
+    std::vector<std::string> param_names = {
+      "hsv_model.yellow.hue_l",
+      "hsv_model.yellow.saturation_l",
+      "hsv_model.yellow.value_l",
+      "hsv_model.yellow.hue_h",
+      "hsv_model.yellow.saturation_h",
+      "hsv_model.yellow.value_h",
+      "hsv_model.white.hue_l",
+      "hsv_model.white.saturation_l",
+      "hsv_model.white.value_l",
+      "hsv_model.white.hue_h",
+      "hsv_model.white.saturation_h",
+      "hsv_model.white.value_h"};
+    std::vector<rclcpp::Parameter> params = get_parameters(param_names);
+        
+    cfg_.yellowHSV.resize(6);
+    cfg_.whiteHSV.resize(6);
+    for(int idx{0}; idx < params.size(); ++idx)
+    {
+      if(idx < 6)
+      {
+        cfg_.yellowHSV[idx] = params[idx].as_int();
+      }else{
+        cfg_.whiteHSV[idx - 6] = params[idx].as_int();
+      }
+    }
   }
 
   void DetectLane::image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -186,17 +239,31 @@ namespace detect_object
 
     cv::inRange(
       hsv,
-      cv::Scalar(27, 130, 160), 
-      cv::Scalar(41, 255, 255), 
+      cv::Scalar(cfg_.yellowHSV[0], cfg_.yellowHSV[1], cfg_.yellowHSV[2]), 
+      cv::Scalar(cfg_.yellowHSV[3], cfg_.yellowHSV[4], cfg_.yellowHSV[5]), 
       maskYellow
     );
 
     cv::inRange(
       hsv,
-      cv::Scalar(0, 0, 180), 
-      cv::Scalar(25, 36, 255), 
+      cv::Scalar(cfg_.whiteHSV[0], cfg_.whiteHSV[1], cfg_.whiteHSV[2]), 
+      cv::Scalar(cfg_.whiteHSV[3], cfg_.whiteHSV[4], cfg_.whiteHSV[5]), 
       maskWhite
     );
+
+    // cv::inRange(
+    //   hsv,
+    //   cv::Scalar(27, 130, 160), 
+    //   cv::Scalar(41, 255, 255), 
+    //   maskYellow
+    // );
+
+    // cv::inRange(
+    //   hsv,
+    //   cv::Scalar(0, 0, 180), 
+    //   cv::Scalar(25, 36, 255), 
+    //   maskWhite
+    // );
 
     cv::bitwise_or(maskYellow, maskWhite, mask);
 

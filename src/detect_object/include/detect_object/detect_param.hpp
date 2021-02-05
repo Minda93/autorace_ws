@@ -1,6 +1,8 @@
 #ifndef DETECT_OBJECT_DETECT_PARAM_HPP_
 #define DETECT_OBJECT_DETECT_PARAM_HPP_
 
+#include <vector>
+
 namespace detect_object
 {
   enum BaseMode{
@@ -22,6 +24,10 @@ namespace detect_object
   {
     bool showImage;
     PerspectiveParam birdView;
+
+    // color model []
+    std::vector<int> yellowHSV;
+    std::vector<int> whiteHSV;
   }; // struct DetectLaneParam
 } // detect_object
 
