@@ -4,6 +4,7 @@
 #include "detect_object/detect_param.hpp"
 
 #include "rclcpp/rclcpp.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -25,6 +26,8 @@ namespace detect_object
   private:
     // init param
     void parse_parameters();
+    rcl_interfaces::msg::SetParametersResult dynamic_load_params(
+      const std::vector<rclcpp::Parameter> &params);
 
     // subscribe image
     void image_callback(const sensor_msgs::msg::Image::SharedPtr msg);

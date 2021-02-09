@@ -1,23 +1,24 @@
 detect_lane:
   ros__parameters:
-    bottom_x: 320.0
-    bottom_y: 240.0
+    birdView:
+      bottom_x: 320
+      bottom_y: 240
+      top_x: 70
+      top_y: -40
     hsv_model:
       white:
-        hue_h: 25
+        hue_h: 41
         hue_l: 0
-        saturation_h: 36
+        saturation_h: 18
         saturation_l: 0
         value_h: 255
-        value_l: 180
+        value_l: 98
       yellow:
-        hue_h: 41
-        hue_l: 27
+        hue_h: 37
+        hue_l: 26
         saturation_h: 255
-        saturation_l: 130
+        saturation_l: 212
         value_h: 255
-        value_l: 160
+        value_l: 119
     show_image: true
-    top_x: 70.0
-    top_y: -40.0
     use_sim_time: true

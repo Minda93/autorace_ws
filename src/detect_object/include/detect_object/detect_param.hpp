@@ -14,10 +14,10 @@ namespace detect_object
 
   struct PerspectiveParam
   {
-    float top_x;
-    float top_y;
-    float bottom_x;
-    float bottom_y;
+    int top_x;
+    int top_y;
+    int bottom_x;
+    int bottom_y;
   };
 
   struct DetectLaneParam

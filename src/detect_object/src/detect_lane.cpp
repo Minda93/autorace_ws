@@ -20,6 +20,9 @@ namespace detect_object
   {
     // param
     parse_parameters();
+    set_on_parameters_set_callback(
+      std::bind(&DetectLane::dynamic_load_params, 
+        this, std::placeholders::_1));
 
     // topic
     auto qosSensor = rclcpp::QoS(
@@ -46,10 +49,10 @@ namespace detect_object
     this->declare_parameter<bool>("show_image", true);
 
     // Perspective Transform param
-    this->declare_parameter<float>("top_x", 70);
-    this->declare_parameter<float>("top_y", -40);
-    this->declare_parameter<float>("bottom_x", 320);
-    this->declare_parameter<float>("bottom_y", 240);
+    this->declare_parameter<int>("birdView.top_x", 70);
+    this->declare_parameter<int>("birdView.top_y", -40);
+    this->declare_parameter<int>("birdView.bottom_x", 320);
+    this->declare_parameter<int>("birdView.bottom_y", 240);
 
     // color model
     this->declare_parameter<int>(
@@ -95,23 +98,23 @@ namespace detect_object
       cfg_.showImage,
       true);
     
-    get_parameter_or<float>(
-      "top_x",
+    get_parameter_or<int>(
+      "birdView.top_x",
       cfg_.birdView.top_x,
       70);
     
-    get_parameter_or<float>(
-      "top_y",
+    get_parameter_or<int>(
+      "birdView.top_y",
       cfg_.birdView.top_y,
       -40);
     
-    get_parameter_or<float>(
-      "bottom_x",
+    get_parameter_or<int>(
+      "birdView.bottom_x",
       cfg_.birdView.bottom_x,
       320);
     
-    get_parameter_or<float>(
-      "bottom_y",
+    get_parameter_or<int>(
+      "birdView.bottom_y",
       cfg_.birdView.bottom_y,
       240);
     
@@ -142,6 +145,89 @@ namespace detect_object
         cfg_.whiteHSV[idx - 6] = params[idx].as_int();
       }
     }
+  }
+
+  rcl_interfaces::msg::SetParametersResult DetectLane::dynamic_load_params(
+    const std::vector<rclcpp::Parameter> &params)
+  {
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true;
+    result.reason = "success";
+
+    for(const auto &param : params)
+    {
+      if(param.get_name() == "show_image" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_BOOL)
+      {
+        cfg_.showImage = param.as_bool();
+      }else if(param.get_name() == "birdView.top_x" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.birdView.top_x = param.as_int();
+      }else if(param.get_name() == "birdView.top_y" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.birdView.top_y = param.as_int();
+      }else if(param.get_name() == "birdView.bottom_x" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.birdView.bottom_x = param.as_int();
+      }else if(param.get_name() == "birdView.bottom_y" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.birdView.bottom_y = param.as_int();
+      }else if(param.get_name() == "hsv_model.yellow.hue_l" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.yellowHSV[0] = param.as_int();
+      }else if(param.get_name() == "hsv_model.yellow.saturation_l" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.yellowHSV[1] = param.as_int();
+      }else if(param.get_name() == "hsv_model.yellow.value_l" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.yellowHSV[2] = param.as_int();
+      }else if(param.get_name() == "hsv_model.yellow.hue_h" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.yellowHSV[3] = param.as_int();
+      }else if(param.get_name() == "hsv_model.yellow.saturation_h" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.yellowHSV[4] = param.as_int();
+      }else if(param.get_name() == "hsv_model.yellow.value_h" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.yellowHSV[5] = param.as_int();
+      }else if(param.get_name() == "hsv_model.white.hue_l" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.whiteHSV[0] = param.as_int();
+      }else if(param.get_name() == "hsv_model.white.saturation_l" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.whiteHSV[1] = param.as_int();
+      }else if(param.get_name() == "hsv_model.white.value_l" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.whiteHSV[2] = param.as_int();
+      }else if(param.get_name() == "hsv_model.white.hue_h" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.whiteHSV[3] = param.as_int();
+      }else if(param.get_name() == "hsv_model.white.saturation_h" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.whiteHSV[4] = param.as_int();
+      }else if(param.get_name() == "hsv_model.white.value_h" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+      {
+        cfg_.whiteHSV[5] = param.as_int();
+      }
+    }
+
+    return result;
   }
 
   void DetectLane::image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -188,6 +274,7 @@ namespace detect_object
       // esc keyboard key = 27
       if(cv::waitKey(3) == 27)
       {
+        cv::destroyWindow("Detect Lane Image");
         rclcpp::shutdown();
       }
     }
@@ -251,26 +338,12 @@ namespace detect_object
       maskWhite
     );
 
-    // cv::inRange(
-    //   hsv,
-    //   cv::Scalar(27, 130, 160), 
-    //   cv::Scalar(41, 255, 255), 
-    //   maskYellow
-    // );
-
-    // cv::inRange(
-    //   hsv,
-    //   cv::Scalar(0, 0, 180), 
-    //   cv::Scalar(25, 36, 255), 
-    //   maskWhite
-    // );
-
     cv::bitwise_or(maskYellow, maskWhite, mask);
 
     // show color result
-    cv::Mat test{cv::Mat::zeros(dst_.size(), dst_.type())};
-    cv::bitwise_and(dst_, dst_, test, mask);
-    image_show(test, cfg_.showImage);
+    // cv::Mat test{cv::Mat::zeros(dst_.size(), dst_.type())};
+    // cv::bitwise_and(dst_, dst_, test, mask);
+    // image_show(test, cfg_.showImage);
   }
 
   void DetectLane::process()
