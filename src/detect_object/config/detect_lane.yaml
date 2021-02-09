@@ -21,4 +21,3 @@ detect_lane:
         value_h: 255
         value_l: 119
     show_image: true
-    use_sim_time: true
