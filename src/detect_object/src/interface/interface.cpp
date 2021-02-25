@@ -8,6 +8,7 @@ namespace detect_object
 {
   namespace interface
   {
+    // rqt dynamic parameter silder
     template <class T>
     rcl_interfaces::msg::ParameterDescriptor set_num_range(
       const std::string &name,

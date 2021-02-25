@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace detect_object
 {
@@ -36,15 +37,19 @@ namespace detect_object
     int encoding2mat_type(const std::string encoding);
 
     // process
-    void homography_transform_process();
-    void detect_lane();
+    void homography_transform_process(cv::Mat &src, cv::Mat &dst);
+    void mask_lane(cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite);
+    void smooth_image();
+    std::vector<cv::Point2f> sliding_window(const cv::Mat &src, cv::Rect window);
+    void line_fitting(const cv::Mat &mask, std::vector<cv::Point2f> &lane_fit);
 
   private:
     // param
     DetectLaneParam cfg_;
-    BaseMode mode_;
     cv::Mat src_;
-    cv::Mat dst_;
+    
+    std::vector<cv::Point2f> yellowLaneFit_;
+    std::vector<cv::Point2f> whiteLaneFit_;
 
     // time
     rclcpp::TimerBase::SharedPtr startTimer_;

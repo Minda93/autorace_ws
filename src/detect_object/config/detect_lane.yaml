@@ -1,10 +1,10 @@
 detect_lane:
   ros__parameters:
     birdView:
-      bottom_x: 320
+      bottom_x: 350
       bottom_y: 240
-      top_x: 70
-      top_y: -40
+      top_x: 90
+      top_y: -60
     hsv_model:
       white:
         hue_h: 41

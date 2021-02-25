@@ -1,7 +1,7 @@
-birdView.bottom_x: 320
+birdView.bottom_x: 350
 birdView.bottom_y: 240
-birdView.top_x: 70
-birdView.top_y: -40
+birdView.top_x: 90
+birdView.top_y: -60
 hsv_model.white.hue_h: 41
 hsv_model.white.hue_l: 0
 hsv_model.white.saturation_h: 18
