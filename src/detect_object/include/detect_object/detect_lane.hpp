@@ -40,16 +40,23 @@ namespace detect_object
     void homography_transform_process(cv::Mat &src, cv::Mat &dst);
     void mask_lane(cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite);
     void smooth_image();
-    std::vector<cv::Point2f> sliding_window(const cv::Mat &src, cv::Rect window);
-    void line_fitting(const cv::Mat &mask, std::vector<cv::Point2f> &lane_fit);
+    void sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst);
+    void line_fitting(const cv::Mat &src, cv::Mat &lane_fit);
 
+    // 
+    cv::Mat polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input = true);
+    std::vector<float> generate_lane_plotting(const cv::Mat &lane_fit, size_t size);
+    
   private:
     // param
     DetectLaneParam cfg_;
     cv::Mat src_;
     
-    std::vector<cv::Point2f> yellowLaneFit_;
-    std::vector<cv::Point2f> whiteLaneFit_;
+    cv::Mat yellowLaneFit_;
+    std::vector<float> yellowLaneFitX_;
+
+    cv::Mat whiteLaneFit_;
+    std::vector<float> whiteLaneFitX_;
 
     // time
     rclcpp::TimerBase::SharedPtr startTimer_;

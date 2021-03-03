@@ -342,64 +342,177 @@ namespace detect_object
     );
   }
 
-  std::vector<cv::Point2f> DetectLane::sliding_window(const cv::Mat &src, cv::Rect window)
+  void DetectLane::sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst)
   {
+    if(src.empty())
+    {
+      return;
+    }
+    
+    // param
     std::vector<cv::Point2f> points;
-    const cv::Size imgSize{src.size()};
+    cv::Size imgSize{src.size()};
+    int nWindows{10}; // Choose the number of sliding windows
+    int margin{50}; // Set the width of the windows +/- margin
+    int minpix{50}; // Set minimum number of pixels found to recenter window
 
-    if(src.empty()){
-      return points;
+    // histogram
+    cv::Mat hist; // hist size = image.width * 1
+    cv::reduce(src, hist, 0, cv::REDUCE_SUM, CV_32FC1);
+
+    // find lane_base
+    int middlePoint{imgSize.width / 2};
+    int currX{0};
+
+    if(left_or_right == "left"){
+      auto lane_base{std::max_element(hist.begin<float>(), hist.end<float>()) - middlePoint};
+      currX = std::distance(hist.begin<float>(), lane_base);
+    }else if(left_or_right == "right"){
+      auto lane_base{std::max_element(hist.begin<float>() + middlePoint, hist.end<float>())};
+      currX = std::distance(hist.begin<float>(), lane_base);
     }
 
-    while(true)
-    {
-      float currX = window.x + window.width*0.5f;
+    // Extract line pixel positions for window
+    int winHeight{imgSize.height / nWindows};
+    for(int idx{0}; idx < nWindows; ++idx){
+      // create window
+      int winX{currX - margin};
+      int winY{imgSize.height - (idx+1)*winHeight};
+      int winWidth{margin+margin};
+      
+      // limit range
+      if(winX < 0)
+      {
+        winX = 0;
+      }
+      if(winY < 0)
+      {
+        winY = 0;
+      }
+      if(winX + winWidth >= imgSize.width)
+      {
+        winX = imgSize.width - winWidth - 1;
+      }      
 
+      // Extract line pixel positions
+      cv::Rect window{winX, winY, margin+margin, winHeight};
       cv::Mat roi{src(window)};
       std::vector<cv::Point2f> locations;
-
-      // Get all non-black pixels. All are white in our case
       cv::findNonZero(roi, locations);
 
       float avgX{0.0f};
-      for(int i{0}; i < locations.size(); ++i)
+      for(auto &location : locations)
       {
-        avgX += window.x + locations[i].x;
+        avgX += (window.x + location.x);
+        points.push_back(location);
       }
-      avgX = locations.empty() ? currX : avgX / locations.size();
+      avgX = (locations.empty()) ? currX : (avgX / locations.size());
 
-      cv::Point point(avgX, window.y + window.height * 0.5f);
-      points.push_back(point);
-
-      // Move the window up
-      window.y -= window.height;
-      if (window.y < 0)
+      // update currX
+      if(locations.size() > minpix)
       {
-        window.y = 0;
-        break;
+        currX = static_cast<int>(avgX);
       }
-
-      // Move x position
-      window.x += (point.x - currX);
-      // Make sure the window doesn't overflow, we get an error if we try to get data outside the matrix
-      if (window.x < 0)
-      {
-        window.x = 0;
-      }
-      if (window.x + window.width >= imgSize.width)
-      {
-        window.x = imgSize.width - window.width - 1;
-      }
+      
+      // draw rect
+      // cv::rectangle(dst, window, (0, 255, 0), 2);
     }
 
-    return points;
+    // polyfit
+    if(!points.empty())
+    {
+      // use points.y for input
+      cv::Mat lane_fit{polyfit(points, 2, false)};
+      if(!lane_fit.empty())
+      {
+        if(left_or_right == "left")
+        {
+          yellowLaneFit_ = lane_fit;
+          // Generate x and y values for plotting
+          yellowLaneFitX_ = generate_lane_plotting(lane_fit, imgSize.height);
+        }else if(left_or_right == "right")
+        {
+          whiteLaneFit_ = lane_fit;
+          // Generate x and y values for plotting
+          whiteLaneFitX_ = generate_lane_plotting(lane_fit, imgSize.height);
+        }
+      }
+    }
   }
 
-  void DetectLane::line_fitting(const cv::Mat &mask, std::vector<cv::Point2f> &lane_fit)
+  void DetectLane::line_fitting(const cv::Mat &src, cv::Mat &lane_fit)
   {
-    std::vector<cv::Point2f> locations;
-    cv::findNonZero(mask, locations);
+    if(src.empty())
+    {
+      return;
+    }
 
+    std::vector<cv::Point2f> locations;
+    cv::findNonZero(src, locations);
+
+  }
+
+  cv::Mat DetectLane::polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input)
+  {
+    /* *******  polyfit  ******* /
+    /*
+    * Xp = y
+    * (X^T*X)p = X^T*y
+    * p = (X^T*X)^-1*X^T*y
+    * (1x3) = (3*n*n*3)*(3*n)*(n*1)
+    * The polynomial fitting function is a polynomial power function
+    * f(x)=a0+a1*x+a2*x^2+a3*x^3+......+an*x^n
+    * 
+    * Overdetermined matrix X = 
+    *   1 x1 x1^2 ... ... x1^n
+    *   1 x2 x2^2 ... ... x2^n
+    *   1 x3 x3^2 ... ... x3^n
+    *     ... ... ... ...
+    *     ... ... ... ...
+    *   1 xm xm^2 ... ... xm^n
+    * ***************************/
+
+    cv::Mat y{points.size(), 1, CV_32F};
+    cv::Mat X{points.size(), order+1, CV_32F};
+    cv::Mat p;
+
+    if(choose_x_input) // choose x for function input
+    {
+      for(int row{0}; row < X.rows; ++row)
+      {
+        float *xPtr = X.ptr<float>(row);
+        for(int col{0}; col < X.cols; ++col)
+        {
+          xPtr[col] = pow(points[row].x, col);
+        }
+        y.at<float>(row) = points[row].y;
+      }
+    }else{ // choose y for function input
+      for(int row{0}; row < X.rows; ++row)
+      {
+        float *xPtr = X.ptr<float>(row);
+        for(int col{0}; col < X.cols; ++col)
+        {
+          xPtr[col] = pow(points[row].y, col);
+        }
+        y.at<float>(row) = points[row].x;
+      }
+    }
+    
+    return (X.t()*X).inv()*X.t()*y;
+  }
+
+  std::vector<float> DetectLane::generate_lane_plotting(const cv::Mat &lane_fit, size_t size)
+  {
+    std::vector<float> lane_fit_vec(size);
+
+    const float *xPtr = lane_fit.ptr<float>(0);
+    for(int idx{0}; idx < size; ++idx)
+    {
+      lane_fit_vec[idx] = xPtr[0] * idx * idx + xPtr[1] * idx + xPtr[2]; 
+    }
+
+    return lane_fit_vec;
   }
 
   void DetectLane::process()
@@ -409,15 +522,18 @@ namespace detect_object
 
     homography_transform_process(src_, birdView);
     mask_lane(birdView, maskYellow, maskWhite);
+    sliding_window(maskYellow, "left", birdView);
+    sliding_window(maskWhite, "right", birdView);
 
     // detect lane
-    if(!whiteLaneFit_.empty() && !yellowLaneFit_.empty())
-    {
-      // line_fitting()
-    }else{
-      
-    }
+    // if(!whiteLaneFit_.empty() && !yellowLaneFit_.empty())
+    // {
+    //   // line_fitting()
+    // }else{
+    //   sliding_window
+    // }
     // 
+    
     // cv::Size maskSize{birdView.size()};
     // float middleX{maskSize.width / 2.};
     // std::vector<cv::Point2f> pts{sliding_window(maskYellow, cv::Rect{0, 270, 50, 30})}; // yellow lane
@@ -439,7 +555,8 @@ namespace detect_object
     // }
 
     // image_show(src_, cfg_.showImage);
-    // image_show(birdView, cfg_.showImage);
+    image_show(birdView, cfg_.showImage);
+    // image_show(maskYellow, cfg_.showImage);
     
     // cv::Mat laneMask;
     // cv::bitwise_or(maskYellow, maskWhite, laneMask);
