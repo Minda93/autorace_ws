@@ -20,6 +20,7 @@ namespace detect_object
     : Node("detect_lane", options)
   {
     // param
+    lossLane_ = true;
     parse_parameters();
     set_on_parameters_set_callback(
       std::bind(&DetectLane::dynamic_load_params, 
@@ -299,17 +300,25 @@ namespace detect_object
     // dst size(250, 300)
     // [200, 0], [800, 0], [800, 600], [200, 600]
     cv::Point2f dstVertices[4]{
-      {0, 0},
-      {250, 0},
-      {250, 300},
-      {0, 300}
+      {50, 0},
+      {200, 0},
+      {200, 300},
+      {50, 300}
     };
 
+    // dst (1000, 600)
+    // cv::Point2f dstVertices[4]{
+    //   {200, 0},
+    //   {800, 0},
+    //   {800, 600},
+    //   {200, 600}
+    // };
+
     // draw line for bird view
-    for(int idx{0}; idx < 4; ++idx)
-    {
-      cv::line(src, srcVertices[idx], srcVertices[(idx+1)%4], cv::Scalar( 255, 0, 0 ), 1, cv::LINE_8);
-    }
+    // for(int idx{0}; idx < 4; ++idx)
+    // {
+    //   cv::line(src, srcVertices[idx], srcVertices[(idx+1)%4], cv::Scalar( 255, 0, 0 ), 1, cv::LINE_8);
+    // }
 
     cv::Mat perspectiveMatrix{getPerspectiveTransform(srcVertices, dstVertices)};
     cv::warpPerspective(
@@ -352,13 +361,14 @@ namespace detect_object
     // param
     std::vector<cv::Point2f> points;
     cv::Size imgSize{src.size()};
-    int nWindows{10}; // Choose the number of sliding windows
+    int nWindows{20}; // Choose the number of sliding windows
     int margin{50}; // Set the width of the windows +/- margin
     int minpix{50}; // Set minimum number of pixels found to recenter window
 
     // histogram
     cv::Mat hist; // hist size = image.width * 1
-    cv::reduce(src, hist, 0, cv::REDUCE_SUM, CV_32FC1);
+    cv::reduce(src(cv::Rect{0, imgSize.height/2, imgSize.width, imgSize.height/2}),
+      hist, 0, cv::REDUCE_SUM, CV_32FC1);
 
     // find lane_base
     int middlePoint{imgSize.width / 2};
@@ -401,10 +411,11 @@ namespace detect_object
       cv::findNonZero(roi, locations);
 
       float avgX{0.0f};
-      for(auto &location : locations)
+      for(auto &point : locations)
       {
-        avgX += (window.x + location.x);
-        points.push_back(location);
+        avgX += (window.x + point.x);
+        point.y += winY;
+        points.push_back(point);
       }
       avgX = (locations.empty()) ? currX : (avgX / locations.size());
 
@@ -413,7 +424,7 @@ namespace detect_object
       {
         currX = static_cast<int>(avgX);
       }
-      
+
       // draw rect
       // cv::rectangle(dst, window, (0, 255, 0), 2);
     }
@@ -436,20 +447,54 @@ namespace detect_object
           // Generate x and y values for plotting
           whiteLaneFitX_ = generate_lane_plotting(lane_fit, imgSize.height);
         }
+        lossLane_ = false;
       }
     }
   }
 
-  void DetectLane::line_fitting(const cv::Mat &src, cv::Mat &lane_fit)
+  void DetectLane::line_fitting(const cv::Mat &src, cv::Mat &lane_fit, std::vector<float> &lane_fitX, cv::Mat &dst)
   {
-    if(src.empty())
+    if(src.empty() || lane_fit.empty())
     {
       return;
     }
 
-    std::vector<cv::Point2f> locations;
-    cv::findNonZero(src, locations);
+    // param
+    int margin{100};
+    std::vector<cv::Point2f> points;
 
+    // Extract line pixel positions
+    std::vector<cv::Point2f> nonzero;
+    cv::findNonZero(src, nonzero);
+    const float *lane_fitPtr = lane_fit.ptr<float>(0);
+    for(int idx{0}; idx < nonzero.size(); idx++)
+    {
+      int x = lane_fitPtr[2] * nonzero[idx].y * nonzero[idx].y + lane_fitPtr[1] * nonzero[idx].y + lane_fitPtr[0];
+      if(nonzero[idx].x > (x - margin) || nonzero[idx].x > (x + margin))
+      {
+        points.push_back(nonzero[idx]);
+      }
+    }
+
+    // std::cout << points.size() << "\n";
+    // std::flush(std::cout);
+
+    // polyfit
+    if(!points.empty())
+    {      
+      // use points.y for input
+      cv::Mat lane_fit_tmp{polyfit(points, 2, false)};
+      if(!lane_fit_tmp.empty())
+      {
+        lane_fit = lane_fit_tmp;
+        // Generate x and y values for plotting
+        lane_fitX = generate_lane_plotting(lane_fit_tmp, src.rows);
+      }else{
+        lossLane_ = true;
+      }
+    }else{
+      lossLane_ = true;
+    }
   }
 
   cv::Mat DetectLane::polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input)
@@ -509,7 +554,7 @@ namespace detect_object
     const float *xPtr = lane_fit.ptr<float>(0);
     for(int idx{0}; idx < size; ++idx)
     {
-      lane_fit_vec[idx] = xPtr[0] * idx * idx + xPtr[1] * idx + xPtr[2]; 
+      lane_fit_vec[idx] = xPtr[2] * idx * idx + xPtr[1] * idx + xPtr[0];
     }
 
     return lane_fit_vec;
@@ -522,37 +567,28 @@ namespace detect_object
 
     homography_transform_process(src_, birdView);
     mask_lane(birdView, maskYellow, maskWhite);
-    sliding_window(maskYellow, "left", birdView);
-    sliding_window(maskWhite, "right", birdView);
+    if(lossLane_)
+    {
+      sliding_window(maskYellow, "left", birdView);
+      sliding_window(maskWhite, "right", birdView);
+    }else{
+      line_fitting(maskYellow, yellowLaneFit_, yellowLaneFitX_, birdView);
+      line_fitting(maskWhite, whiteLaneFit_, whiteLaneFitX_, birdView);
+    }
+      
+    if(!yellowLaneFitX_.empty() || !whiteLaneFitX_.empty())
+    {
+      // std::vector<cv::Point> points;
+      // for(int y{0}; y < birdView.rows; ++y){
+      //   points.push_back(cv::Point{yellowLaneFitX_[y], y});
+      // }
+      // cv::polylines(birdView, points, false, (0, 0, 255), 5);
 
-    // detect lane
-    // if(!whiteLaneFit_.empty() && !yellowLaneFit_.empty())
-    // {
-    //   // line_fitting()
-    // }else{
-    //   sliding_window
-    // }
-    // 
-    
-    // cv::Size maskSize{birdView.size()};
-    // float middleX{maskSize.width / 2.};
-    // std::vector<cv::Point2f> pts{sliding_window(maskYellow, cv::Rect{0, 270, 50, 30})}; // yellow lane
-    
-    // if(!birdView.empty()){
-    //   for (int i = 0; i < pts.size() - 1; ++i)
-    //   {
-    //     cv::line(birdView, pts[i], pts[i + 1], cv::Scalar(255, 0, 0), 3);
-    //   }
-    // }
-  
-    // std::vector<cv::Point2f> pts{sliding_window(maskWhite, cv::Rect{100, 270, 50, 30})}; // white lane
-
-    // if(!birdView.empty()){
-    //   for (int i = 0; i < pts.size() - 1; ++i)
-    //   {
-    //     cv::line(birdView, pts[i], pts[i + 1], cv::Scalar(255, 0, 0), 3);
-    //   }
-    // }
+      std::cout << "yellow : " << yellowLaneFitX_[150] << "\n";
+      std::cout << "white : " << whiteLaneFitX_[150] << "\n";
+      std::cout << "center : " << (yellowLaneFitX_[150] + whiteLaneFitX_[150]) / 2 << "\n";
+      std::flush(std::cout);
+    }
 
     // image_show(src_, cfg_.showImage);
     image_show(birdView, cfg_.showImage);

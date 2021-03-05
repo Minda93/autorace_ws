@@ -41,7 +41,7 @@ namespace detect_object
     void mask_lane(cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite);
     void smooth_image();
     void sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst);
-    void line_fitting(const cv::Mat &src, cv::Mat &lane_fit);
+    void line_fitting(const cv::Mat &src, cv::Mat &lane_fit, std::vector<float> &lane_fitX, cv::Mat &dst);
 
     // 
     cv::Mat polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input = true);
@@ -50,6 +50,7 @@ namespace detect_object
   private:
     // param
     DetectLaneParam cfg_;
+    bool lossLane_;
     cv::Mat src_;
     
     cv::Mat yellowLaneFit_;
