@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(detect_object)
+project(cam_tools)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -32,26 +32,19 @@ find_package(OpenCV REQUIRED)
 
 include_directories(include)
 
-add_library(detect_object_lib SHARED
-  src/image.cpp
-  src/interface/interface.cpp
-  src/interface/interface_templates.cpp)
-ament_target_dependencies(detect_object_lib
-  "rclcpp"
-  "OpenCV"
-  "sensor_msgs")
+# add_library(detect_lib SHARED)
+# target_link_libraries(cartpole_controller cartpole_controller_lib)
 
-add_library(detect_lane SHARED
-  src/detect_lane.cpp)
-target_link_libraries(detect_lane detect_object_lib)
-target_compile_definitions(detect_lane 
-  PRIVATE "DETECT_OBJECT_BUILDING_DLL")
-ament_target_dependencies(detect_lane
+add_library(cam_calibration SHARED
+  src/cam_calibration.cpp)
+target_compile_definitions(cam_calibration 
+  PRIVATE "CAM_TOOLS_BUILDING_DLL")
+ament_target_dependencies(cam_calibration
   "rclcpp"
   "rclcpp_components"
   "sensor_msgs"
   "OpenCV")
-rclcpp_components_register_nodes(detect_lane "detect_object::DetectLane")
+rclcpp_components_register_nodes(cam_calibration "cam_tools::CamCalibration")
 
 ################################################################################
 # Install
@@ -59,7 +52,7 @@ rclcpp_components_register_nodes(detect_lane "detect_object::DetectLane")
 
 # add the install(TARGETS…) section so ros2 can find your component
 install(TARGETS
-  detect_lane
+  cam_calibration
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

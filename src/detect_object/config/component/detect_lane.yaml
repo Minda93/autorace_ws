@@ -1,0 +1,17 @@
+birdView.bottom_x: 350
+birdView.bottom_y: 240
+birdView.top_x: 90
+birdView.top_y: -60
+hsv_model.white.hue_h: 41
+hsv_model.white.hue_l: 0
+hsv_model.white.saturation_h: 18
+hsv_model.white.saturation_l: 0
+hsv_model.white.value_h: 255
+hsv_model.white.value_l: 98
+hsv_model.yellow.hue_h: 37
+hsv_model.yellow.hue_l: 26
+hsv_model.yellow.saturation_h: 255
+hsv_model.yellow.saturation_l: 212
+hsv_model.yellow.value_h: 255
+hsv_model.yellow.value_l: 119
+show_image: true
