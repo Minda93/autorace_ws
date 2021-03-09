@@ -39,11 +39,6 @@ namespace detect_object
       qosSensor,
       std::bind(&DetectLane::image_callback, this, std::placeholders::_1)
     );
-    
-    // temporary setting
-    startTimer_ = create_wall_timer(
-      std::chrono::milliseconds(33),
-      std::bind(&DetectLane::process, this));
   }
 
   void DetectLane::parse_parameters()
@@ -138,7 +133,7 @@ namespace detect_object
         
     cfg_.yellowHSV.resize(6);
     cfg_.whiteHSV.resize(6);
-    for(int idx{0}; idx < params.size(); ++idx)
+    for(size_t idx{0}; idx < params.size(); ++idx)
     {
       if(idx < 6)
       {
@@ -244,7 +239,8 @@ namespace detect_object
       cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
     }
 
-    frame.copyTo(src_);
+    // frame.copyTo(src_);
+    process(frame);
   }
 
   int DetectLane::encoding2mat_type(const std::string encoding)
@@ -282,14 +278,14 @@ namespace detect_object
     }
   }
 
-  void DetectLane::homography_transform_process(cv::Mat &src, cv::Mat &dst)
+  void DetectLane::homography_transform_process(const cv::Mat &src, cv::Mat &dst)
   {
     if(src.empty()){
       return;
     }
 
     // src size(640, 480)
-    cv::Point2f centerPoint{src_.size()/2};
+    cv::Point2f centerPoint{src.size()/2};
     cv::Point2f srcVertices[4]{
       {centerPoint.x - cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
       {centerPoint.x + cfg_.birdView.top_x, centerPoint.y - cfg_.birdView.top_y},
@@ -326,7 +322,7 @@ namespace detect_object
       cv::Size(250, 300), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
   }
 
-  void DetectLane::mask_lane(cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite)
+  void DetectLane::mask_lane(const cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite)
   {
     if(src.empty()){
       return;
@@ -476,9 +472,6 @@ namespace detect_object
       }
     }
 
-    // std::cout << points.size() << "\n";
-    // std::flush(std::cout);
-
     // polyfit
     if(!points.empty())
     {      
@@ -499,7 +492,7 @@ namespace detect_object
 
   cv::Mat DetectLane::polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input)
   {
-    /* *******  polyfit  ******* /
+    /* *******  polyfit  ******* */
     /*
     * Xp = y
     * (X^T*X)p = X^T*y
@@ -515,7 +508,7 @@ namespace detect_object
     *     ... ... ... ...
     *     ... ... ... ...
     *   1 xm xm^2 ... ... xm^n
-    * ***************************/
+    * ************************** */
 
     cv::Mat y{points.size(), 1, CV_32F};
     cv::Mat X{points.size(), order+1, CV_32F};
@@ -560,12 +553,12 @@ namespace detect_object
     return lane_fit_vec;
   }
 
-  void DetectLane::process()
+  void DetectLane::process(const cv::Mat &src)
   {
     cv::Mat birdView;
     cv::Mat maskYellow, maskWhite;
 
-    homography_transform_process(src_, birdView);
+    homography_transform_process(src, birdView);
     mask_lane(birdView, maskYellow, maskWhite);
     if(lossLane_)
     {
@@ -590,8 +583,8 @@ namespace detect_object
       std::flush(std::cout);
     }
 
-    // image_show(src_, cfg_.showImage);
-    image_show(birdView, cfg_.showImage);
+    // image_show(src, cfg_.showImage);
+    // image_show(birdView, cfg_.showImage);
     // image_show(maskYellow, cfg_.showImage);
     
     // cv::Mat laneMask;

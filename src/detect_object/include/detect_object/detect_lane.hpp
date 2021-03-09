@@ -22,7 +22,7 @@ namespace detect_object
     ~DetectLane() = default;
 
     void image_show(const cv::Mat &src, bool showImage);
-    void process();
+    void process(const cv::Mat &src);
   
   private:
     // init param
@@ -37,8 +37,8 @@ namespace detect_object
     int encoding2mat_type(const std::string encoding);
 
     // process
-    void homography_transform_process(cv::Mat &src, cv::Mat &dst);
-    void mask_lane(cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite);
+    void homography_transform_process(const cv::Mat &src, cv::Mat &dst);
+    void mask_lane(const cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite);
     void smooth_image();
     void sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst);
     void line_fitting(const cv::Mat &src, cv::Mat &lane_fit, std::vector<float> &lane_fitX, cv::Mat &dst);
@@ -51,16 +51,12 @@ namespace detect_object
     // param
     DetectLaneParam cfg_;
     bool lossLane_;
-    cv::Mat src_;
     
     cv::Mat yellowLaneFit_;
     std::vector<float> yellowLaneFitX_;
 
     cv::Mat whiteLaneFit_;
     std::vector<float> whiteLaneFitX_;
-
-    // time
-    rclcpp::TimerBase::SharedPtr startTimer_;
     
     // topic 
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
