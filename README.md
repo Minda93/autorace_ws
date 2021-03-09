@@ -43,6 +43,11 @@ ros2 practice 2
   - [ ] calibration (bug)
 * detect_object
   - [x] detect_lane (detect lane)
+  - [ ] detect_traffic_sign
+* strategy
+  - [ ] decider
+* control
+  - [x] control_lane
 
 # Bug  
   * gazebo_ros_pkgs(ros2 branch) compile error (source foxy-release_4)
