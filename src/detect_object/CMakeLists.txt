@@ -33,10 +33,13 @@ find_package(OpenCV REQUIRED)
 include_directories(include)
 
 add_library(detect_object_lib SHARED
+  src/image.cpp
   src/interface/interface.cpp
   src/interface/interface_templates.cpp)
 ament_target_dependencies(detect_object_lib
-  "rclcpp")
+  "rclcpp"
+  "OpenCV"
+  "sensor_msgs")
 
 add_library(detect_lane SHARED
   src/detect_lane.cpp)

@@ -1,15 +1,16 @@
 #include "detect_object/detect_lane.hpp"
+#include "detect_object/image.hpp"
 #include "detect_object/interface/interface.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
 #include <memory>
-#include <chrono>
 #include <functional>
 #include <string>
 #include <vector>
@@ -17,7 +18,7 @@
 namespace detect_object
 {
   DetectLane::DetectLane(const rclcpp::NodeOptions &options)
-    : Node("detect_lane", options)
+    : Image("detect_lane", options)
   {
     // param
     lossLane_ = true;
@@ -25,20 +26,9 @@ namespace detect_object
     set_on_parameters_set_callback(
       std::bind(&DetectLane::dynamic_load_params, 
         this, std::placeholders::_1));
-
+    
     // topic
-    auto qosSensor = rclcpp::QoS(
-      rclcpp::QoSInitialization(
-        rmw_qos_profile_sensor_data.history,
-        rmw_qos_profile_sensor_data.depth
-      ),
-      rmw_qos_profile_sensor_data
-    );
-    image_sub_ = create_subscription<sensor_msgs::msg::Image>(
-      "/camera/image_raw",
-      qosSensor,
-      std::bind(&DetectLane::image_callback, this, std::placeholders::_1)
-    );
+    lane_center_pub_ = create_publisher<std_msgs::msg::Float64>("lane_center_x", 10);
   }
 
   void DetectLane::parse_parameters()
@@ -54,41 +44,41 @@ namespace detect_object
     // color model
     this->declare_parameter<int>(
       "hsv_model.yellow.hue_l", 27,
-      interface::set_num_range<double>("hsv_model.yellow.hue_l", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.yellow.hue_l", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.yellow.saturation_l", 130,
-      interface::set_num_range<double>("hsv_model.yellow.saturation_l", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.yellow.saturation_l", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.yellow.value_l", 160,
-      interface::set_num_range<double>("hsv_model.yellow.value_l", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.yellow.value_l", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.yellow.hue_h", 41,
-      interface::set_num_range<double>("hsv_model.yellow.hue_h", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.yellow.hue_h", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.yellow.saturation_h", 255,
-      interface::set_num_range<double>("hsv_model.yellow.saturation_h", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.yellow.saturation_h", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.yellow.value_h", 255,
-      interface::set_num_range<double>("hsv_model.yellow.value_h", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.yellow.value_h", interface::INTEGER, 0, 255, 1));
 
     this->declare_parameter<int>(
       "hsv_model.white.hue_l", 0,
-      interface::set_num_range<double>("hsv_model.white.hue_l", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.white.hue_l", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.white.saturation_l", 0,
-      interface::set_num_range<double>("hsv_model.white.saturation_l", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.white.saturation_l", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.white.value_l", 180,
-      interface::set_num_range<double>("hsv_model.white.value_l", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.white.value_l", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.white.hue_h", 25,
-      interface::set_num_range<double>("hsv_model.white.hue_h", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.white.hue_h", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.white.saturation_h", 36,
-      interface::set_num_range<double>("hsv_model.white.saturation_h", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.white.saturation_h", interface::INTEGER, 0, 255, 1));
     this->declare_parameter<int>(
       "hsv_model.white.value_h", 255,
-      interface::set_num_range<double>("hsv_model.white.value_h", interface::INTEGER, 0, 255, 1));
+      interface::set_num_range<int>("hsv_model.white.value_h", interface::INTEGER, 0, 255, 1));
 
     get_parameter_or<bool>(
       "show_image",
@@ -225,57 +215,6 @@ namespace detect_object
     }
 
     return result;
-  }
-
-  void DetectLane::image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
-  {
-    cv::Mat frame{
-      msg->height, msg->width,
-      encoding2mat_type(msg->encoding),
-      const_cast<unsigned char *>(msg->data.data()), msg->step};
-    
-    if(msg->encoding == "rgb8")
-    {
-      cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
-    }
-
-    // frame.copyTo(src_);
-    process(frame);
-  }
-
-  int DetectLane::encoding2mat_type(const std::string encoding)
-  {
-    if (encoding == "mono8") {
-      return CV_8UC1;
-    } else if (encoding == "bgr8") {
-      return CV_8UC3;
-    } else if (encoding == "mono16") {
-      return CV_16SC1;
-    } else if (encoding == "rgba8") {
-      return CV_8UC4;
-    } else if (encoding == "bgra8") {
-      return CV_8UC4;
-    } else if (encoding == "32FC1") {
-      return CV_32FC1;
-    } else if (encoding == "rgb8") {
-      return CV_8UC3;
-    } else {
-      throw std::runtime_error("Unsupported encoding type");
-    }
-  }
-
-  void DetectLane::image_show(const cv::Mat &src, bool showImage)
-  {
-    if(showImage && !src.empty()){
-      cv::imshow("Detect Lane Image", src);
-      
-      // esc keyboard key = 27
-      if(cv::waitKey(3) == 27)
-      {
-        cv::destroyWindow("Detect Lane Image");
-        rclcpp::shutdown();
-      }
-    }
   }
 
   void DetectLane::homography_transform_process(const cv::Mat &src, cv::Mat &dst)
@@ -422,7 +361,7 @@ namespace detect_object
       }
 
       // draw rect
-      // cv::rectangle(dst, window, (0, 255, 0), 2);
+      // cv::rectangle(dst, window, cv::Scalar(0, 255, 0), 2);
     }
 
     // polyfit
@@ -490,6 +429,37 @@ namespace detect_object
     }
   }
 
+  void DetectLane::make_lane(cv::Mat &dst)
+  {
+    // param
+    int datumY{150};
+
+    if(!yellowLaneFitX_.empty() || !whiteLaneFitX_.empty())
+    {
+      // // draw left line
+      // std::vector<cv::Point> points;
+      // for(size_t y{0}; y < dst.rows; ++y){
+      //   points.push_back(cv::Point{yellowLaneFitX_[y], y});
+      // }
+      // cv::polylines(dst, points, false, cv::Scalar(0, 0, 255), 5);
+
+      // // draw right line
+      // points.clear();
+      // for(size_t y{0}; y < dst.rows; ++y){
+      //   points.push_back(cv::Point{whiteLaneFitX_[y], y});
+      // }
+      // cv::polylines(dst, points, false, cv::Scalar(255, 0, 0), 5);
+
+      double centerX{(yellowLaneFitX_[datumY] + whiteLaneFitX_[datumY]) / 2.0};
+      pub(centerX);
+
+      std::cout << "yellow : " << yellowLaneFitX_[datumY] << "\n";
+      std::cout << "white : " << whiteLaneFitX_[datumY] << "\n";
+      std::cout << "center : " << centerX << "\n";
+      std::flush(std::cout);
+    }
+  }
+
   cv::Mat DetectLane::polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input)
   {
     /* *******  polyfit  ******* */
@@ -553,6 +523,14 @@ namespace detect_object
     return lane_fit_vec;
   }
 
+  void DetectLane::pub(double centerX)
+  {
+    auto msg = std::make_unique<std_msgs::msg::Float64>();
+    msg->data = centerX;
+
+    lane_center_pub_->publish(std::move(msg));
+  }
+
   void DetectLane::process(const cv::Mat &src)
   {
     cv::Mat birdView;
@@ -568,25 +546,15 @@ namespace detect_object
       line_fitting(maskYellow, yellowLaneFit_, yellowLaneFitX_, birdView);
       line_fitting(maskWhite, whiteLaneFit_, whiteLaneFitX_, birdView);
     }
-      
-    if(!yellowLaneFitX_.empty() || !whiteLaneFitX_.empty())
-    {
-      // std::vector<cv::Point> points;
-      // for(int y{0}; y < birdView.rows; ++y){
-      //   points.push_back(cv::Point{yellowLaneFitX_[y], y});
-      // }
-      // cv::polylines(birdView, points, false, (0, 0, 255), 5);
 
-      std::cout << "yellow : " << yellowLaneFitX_[150] << "\n";
-      std::cout << "white : " << whiteLaneFitX_[150] << "\n";
-      std::cout << "center : " << (yellowLaneFitX_[150] + whiteLaneFitX_[150]) / 2 << "\n";
-      std::flush(std::cout);
-    }
+    make_lane(birdView);
 
-    // image_show(src, cfg_.showImage);
-    // image_show(birdView, cfg_.showImage);
-    // image_show(maskYellow, cfg_.showImage);
-    
+    // debug
+    // image_show(src, cfg_.showImage, "detect_lane_ori");
+    // image_show(birdView, cfg_.showImage, "bird_view");
+    // image_show(maskYellow, cfg_.showImage, "mask_yellow");
+    // image_show(maskWhite, cfg_.showImage, "mask_white");
+
     // cv::Mat laneMask;
     // cv::bitwise_or(maskYellow, maskWhite, laneMask);
     // image_show(laneMask, cfg_.showImage);
