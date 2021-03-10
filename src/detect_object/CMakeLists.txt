@@ -24,6 +24,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
 ################################################################################
@@ -50,6 +51,7 @@ ament_target_dependencies(detect_lane
   "rclcpp"
   "rclcpp_components"
   "sensor_msgs"
+  "std_msgs"
   "OpenCV")
 rclcpp_components_register_nodes(detect_lane "detect_object::DetectLane")
 
