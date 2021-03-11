@@ -29,40 +29,35 @@ find_package(geometry_msgs REQUIRED)
 # Build
 ################################################################################
 
-# include_directories(include)
+include_directories(include)
 
-# add_library(detect_object_lib SHARED
-#   src/image.cpp
-#   src/interface/interface.cpp
-#   src/interface/interface_templates.cpp)
-# ament_target_dependencies(detect_object_lib
-#   "rclcpp"
-#   "OpenCV"
-#   "sensor_msgs")
+add_library(controller_lib SHARED
+  src/controller/pid.cpp)
+# ament_target_dependencies(controller_lib "")
 
-# add_library(detect_lane SHARED
-#   src/detect_lane.cpp)
-# target_link_libraries(detect_lane detect_object_lib)
-# target_compile_definitions(detect_lane 
-#   PRIVATE "DETECT_OBJECT_BUILDING_DLL")
-# ament_target_dependencies(detect_lane
-#   "rclcpp"
-#   "rclcpp_components"
-#   "sensor_msgs"
-#   "OpenCV")
-# rclcpp_components_register_nodes(detect_lane "detect_object::DetectLane")
+add_library(lane_control SHARED
+  src/lane_control.cpp)
+target_link_libraries(lane_control controller_lib)
+target_compile_definitions(lane_control 
+  PRIVATE "MOTION_CONTROL_BUILDING_DLL")
+ament_target_dependencies(lane_control
+  "rclcpp"
+  "rclcpp_components"
+  "std_msgs"
+  "geometry_msgs")
+rclcpp_components_register_nodes(lane_control "motion_control::LaneControl")
 
 ################################################################################
 # Install
 ################################################################################
 
 # add the install(TARGETS…) section so ros2 can find your component
-# install(TARGETS
-#   detect_lane
-#   ARCHIVE DESTINATION lib
-#   LIBRARY DESTINATION lib
-#   RUNTIME DESTINATION bin
-# )
+install(TARGETS
+  lane_control
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
 install(
   DIRECTORY launch config
