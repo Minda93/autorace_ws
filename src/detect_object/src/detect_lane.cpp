@@ -453,10 +453,10 @@ namespace detect_object
       double centerX{(yellowLaneFitX_[datumY] + whiteLaneFitX_[datumY]) / 2.0};
       pub(centerX);
 
-      std::cout << "yellow : " << yellowLaneFitX_[datumY] << "\n";
-      std::cout << "white : " << whiteLaneFitX_[datumY] << "\n";
-      std::cout << "center : " << centerX << "\n";
-      std::flush(std::cout);
+      // std::cout << "yellow : " << yellowLaneFitX_[datumY] << "\n";
+      // std::cout << "white : " << whiteLaneFitX_[datumY] << "\n";
+      // std::cout << "center : " << centerX << "\n";
+      // std::flush(std::cout);
     }
   }
 
