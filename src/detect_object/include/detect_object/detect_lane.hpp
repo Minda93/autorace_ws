@@ -37,6 +37,7 @@ namespace detect_object
     void homography_transform_process(const cv::Mat &src, cv::Mat &dst);
     void mask_lane(const cv::Mat &src, cv::Mat &maskYellow, cv::Mat &maskWhite);
     void smooth_image();
+    void cal_line_reliability(const cv::Mat &maskYellow, const cv::Mat &maskWhite);
     void sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst);
     void line_fitting(const cv::Mat &src, cv::Mat &lane_fit, std::vector<float> &lane_fitX, cv::Mat &dst);
     void make_lane(cv::Mat &dst);
@@ -44,6 +45,7 @@ namespace detect_object
     // math algorithm
     cv::Mat polyfit(const std::vector<cv::Point2f> &points, int order, bool choose_x_input = true);
     std::vector<float> generate_lane_plotting(const cv::Mat &lane_fit, size_t size);
+    double normalize_lane_center(double centerX, const cv::Size imageSize);
     
     // topic
     void pub(double centerX);
@@ -51,13 +53,15 @@ namespace detect_object
   private:
     // param
     DetectLaneParam cfg_;
-    bool lossLane_;
+    // bool lossLane_;
     
     cv::Mat yellowLaneFit_;
     std::vector<float> yellowLaneFitX_;
+    double yellowReliability_;
 
     cv::Mat whiteLaneFit_;
     std::vector<float> whiteLaneFitX_;
+    double whiteReliability_;
 
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr lane_center_pub_;
   };

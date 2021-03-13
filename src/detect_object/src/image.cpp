@@ -77,7 +77,8 @@ namespace detect_object
       // esc keyboard key = 27
       if(cv::waitKey(3) == 27)
       {
-        cv::destroyWindow(windowName);
+        // cv::destroyWindow(windowName);
+        cv::destroyAllWindows();
         rclcpp::shutdown();
       }
     }

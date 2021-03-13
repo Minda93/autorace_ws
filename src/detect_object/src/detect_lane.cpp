@@ -18,10 +18,10 @@
 namespace detect_object
 {
   DetectLane::DetectLane(const rclcpp::NodeOptions &options)
-    : Image("detect_lane", options)
+    : Image("detect_lane", options),
+    yellowReliability_{0.0}, whiteReliability_{0.0}
   {
     // param
-    lossLane_ = true;
     parse_parameters();
     set_on_parameters_set_callback(
       std::bind(&DetectLane::dynamic_load_params, 
@@ -80,6 +80,9 @@ namespace detect_object
       "hsv_model.white.value_h", 255,
       interface::set_num_range<int>("hsv_model.white.value_h", interface::INTEGER, 0, 255, 1));
 
+    // mask_lane : none zero excepted value
+    this->declare_parameter<double>("mask_lane.expected_value", 2500.0);
+
     get_parameter_or<bool>(
       "show_image",
       cfg_.showImage,
@@ -132,6 +135,11 @@ namespace detect_object
         cfg_.whiteHSV[idx - 6] = params[idx].as_int();
       }
     }
+
+    get_parameter_or<double>(
+      "mask_lane.expected_value",
+      cfg_.expectedValue,
+      2500.0);
   }
 
   rcl_interfaces::msg::SetParametersResult DetectLane::dynamic_load_params(
@@ -211,6 +219,14 @@ namespace detect_object
         param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
       {
         cfg_.whiteHSV[5] = param.as_int();
+      }else if(param.get_name() == "mask_lane.expected_value" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+      {
+        cfg_.expectedValue = param.as_double();
+        if(cfg_.expectedValue <= 0)
+        {
+          cfg_.expectedValue = 1;
+        }
       }
     }
 
@@ -284,6 +300,19 @@ namespace detect_object
       cv::Scalar(cfg_.whiteHSV[3], cfg_.whiteHSV[4], cfg_.whiteHSV[5]), 
       maskWhite
     );
+  }
+
+  void DetectLane::cal_line_reliability(const cv::Mat &maskYellow, const cv::Mat &maskWhite)
+  {
+    std::vector<cv::Point2f> nonzero;
+    cv::findNonZero(maskYellow, nonzero);
+
+    yellowReliability_ = (!nonzero.empty())? (static_cast<double>(nonzero.size()) / cfg_.expectedValue) : 0.0;
+
+    nonzero.clear();
+    cv::findNonZero(maskWhite, nonzero);
+
+    whiteReliability_ = (!nonzero.empty())? (static_cast<double>(nonzero.size()) / cfg_.expectedValue) : 0.0;
   }
 
   void DetectLane::sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst)
@@ -367,6 +396,10 @@ namespace detect_object
     // polyfit
     if(!points.empty())
     {
+      // draw 
+      // for(auto &point : points)
+      //   cv::circle(dst, point, 1, cv::Scalar(255,0,255), -1);
+
       // use points.y for input
       cv::Mat lane_fit{polyfit(points, 2, false)};
       if(!lane_fit.empty())
@@ -382,7 +415,6 @@ namespace detect_object
           // Generate x and y values for plotting
           whiteLaneFitX_ = generate_lane_plotting(lane_fit, imgSize.height);
         }
-        lossLane_ = false;
       }
     }
   }
@@ -413,7 +445,11 @@ namespace detect_object
 
     // polyfit
     if(!points.empty())
-    {      
+    {
+      // draw 
+      // for(auto &point : points)
+      //   cv::circle(dst, point, 1, cv::Scalar(255,0,255), -1);
+            
       // use points.y for input
       cv::Mat lane_fit_tmp{polyfit(points, 2, false)};
       if(!lane_fit_tmp.empty())
@@ -421,11 +457,7 @@ namespace detect_object
         lane_fit = lane_fit_tmp;
         // Generate x and y values for plotting
         lane_fitX = generate_lane_plotting(lane_fit_tmp, src.rows);
-      }else{
-        lossLane_ = true;
       }
-    }else{
-      lossLane_ = true;
     }
   }
 
@@ -434,29 +466,43 @@ namespace detect_object
     // param
     int datumY{150};
 
+    // draw lane
+    // if(!yellowLaneFitX_.empty())
+    // {
+    //   std::vector<cv::Point> points;
+    //   for(size_t y{0}; y < dst.rows; ++y){
+    //     points.push_back(cv::Point{yellowLaneFitX_[y], y});
+    //   }
+    //   cv::polylines(dst, points, false, cv::Scalar(0, 0, 255), 5);
+    // }
+
+    // if(!whiteLaneFitX_.empty())
+    // {
+    //   std::vector<cv::Point> points;
+    //   for(size_t y{0}; y < dst.rows; ++y){
+    //     points.push_back(cv::Point{whiteLaneFitX_[y], y});
+    //   }
+    //   cv::polylines(dst, points, false, cv::Scalar(255, 0, 0), 5);
+    // }
+
     if(!yellowLaneFitX_.empty() || !whiteLaneFitX_.empty())
     {
-      // // draw left line
-      // std::vector<cv::Point> points;
-      // for(size_t y{0}; y < dst.rows; ++y){
-      //   points.push_back(cv::Point{yellowLaneFitX_[y], y});
-      // }
-      // cv::polylines(dst, points, false, cv::Scalar(0, 0, 255), 5);
-
-      // // draw right line
-      // points.clear();
-      // for(size_t y{0}; y < dst.rows; ++y){
-      //   points.push_back(cv::Point{whiteLaneFitX_[y], y});
-      // }
-      // cv::polylines(dst, points, false, cv::Scalar(255, 0, 0), 5);
-
-      double centerX{(yellowLaneFitX_[datumY] + whiteLaneFitX_[datumY]) / 2.0};
-      pub(centerX);
-
-      // std::cout << "yellow : " << yellowLaneFitX_[datumY] << "\n";
-      // std::cout << "white : " << whiteLaneFitX_[datumY] << "\n";
-      // std::cout << "center : " << centerX << "\n";
-      // std::flush(std::cout);
+      if(yellowReliability_ > 0.15 && whiteReliability_ > 0.15)
+      {
+        double centerX{(yellowLaneFitX_[datumY] + whiteLaneFitX_[datumY]) / 2.0};
+        double normCenterX{normalize_lane_center(centerX, dst.size())};
+        pub(normCenterX);
+      }else if(yellowReliability_ <= 0.15 && whiteReliability_ > 0.15)
+      {
+        double centerX = whiteLaneFitX_[datumY] - (static_cast<double>(dst.cols) / 2.0);
+        double normCenterX{normalize_lane_center(centerX, dst.size())};
+        pub(normCenterX);
+      }else if(yellowReliability_ > 0.15 && whiteReliability_ <= 0.15)
+      {
+        double centerX = yellowLaneFitX_[datumY] + (static_cast<double>(dst.cols) / 2.0);
+        double normCenterX{normalize_lane_center(centerX, dst.size())};
+        pub(normCenterX); 
+      }
     }
   }
 
@@ -523,6 +569,15 @@ namespace detect_object
     return lane_fit_vec;
   }
 
+  double DetectLane::normalize_lane_center(double centerX, const cv::Size imageSize)
+  {
+    double normCenterX{centerX};
+
+    normCenterX -= (imageSize.width / 2.0);
+
+    return normCenterX;
+  }
+
   void DetectLane::pub(double centerX)
   {
     auto msg = std::make_unique<std_msgs::msg::Float64>();
@@ -538,12 +593,19 @@ namespace detect_object
 
     homography_transform_process(src, birdView);
     mask_lane(birdView, maskYellow, maskWhite);
-    if(lossLane_)
+    cal_line_reliability(maskYellow, maskWhite);
+    
+    if(yellowReliability_ <= 0.15 || yellowLaneFitX_.empty())
     {
       sliding_window(maskYellow, "left", birdView);
-      sliding_window(maskWhite, "right", birdView);
     }else{
       line_fitting(maskYellow, yellowLaneFit_, yellowLaneFitX_, birdView);
+    }
+
+    if(whiteReliability_ <= 0.15 || whiteLaneFitX_.empty())
+    {
+      sliding_window(maskWhite, "right", birdView);
+    }else{
       line_fitting(maskWhite, whiteLaneFit_, whiteLaneFitX_, birdView);
     }
 
