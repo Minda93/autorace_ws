@@ -28,6 +28,9 @@ namespace detect_object
     // color model []
     std::vector<int> yellowHSV;
     std::vector<int> whiteHSV;
+
+    // make lane 
+    double expectedValue; // none zero value
   }; // struct DetectLaneParam
 } // detect_object
 

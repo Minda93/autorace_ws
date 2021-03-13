@@ -5,6 +5,8 @@ detect_lane:
       bottom_y: 240
       top_x: 90
       top_y: -60
+    mask_lane:
+      expected_value: 2500.0
     hsv_model:
       white:
         hue_h: 41
@@ -12,7 +14,7 @@ detect_lane:
         saturation_h: 18
         saturation_l: 0
         value_h: 255
-        value_l: 98
+        value_l: 191
       yellow:
         hue_h: 37
         hue_l: 26

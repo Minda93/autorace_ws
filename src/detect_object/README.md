@@ -17,10 +17,18 @@
     * Perspective Transform
     * object segmentation
       * color segmentation 
+      * cal_line_reliability
+        * the none_zero pixel of mask / excepted_value  
     * Lane-line pixel identification
       * sliding window
       * line fitting
-      
+    * make_lane
+      * normalize centerX
+        * method_1
+          ```
+            normCenterX = centerX - (dst_cols / 2)
+          ```
+
   * topic
     * input
       * camera/image_raw (sensor_msgs/Image)
@@ -45,6 +53,11 @@
     * object segmentation
       * param
       ```yaml
+        mask_lane:
+          # cal none zero for mask 
+          # reliability = noneZero / excepted_value
+          # straight lane : the average value of none zero pixel is 2500 
+          expected_value: 2500.0
         hsv_model:
           white:
             hue_h: 41
@@ -86,8 +99,9 @@
         #   # get centerX for datum
         #   # range [0, dst_rows-1]
         #   datumY: 150
-        #   # (dst_cols / 2)
+        #   # centerX - (dst_cols / 2)
         #   normalize: 124
+        #   line_reliability: 0.15
       ```  
       
 # TODO  
@@ -104,7 +118,10 @@
   - [x] make_lane
     - [x] normalize centerX
     - [x] condition change 
-
+  - [ ] create find_lane object
+    - [ ] Lane-line pixel identification
+    - [ ] make_lane
+    - [ ] maybe use thread
 # Issue  
 * rqt_gui dynamic_reconfigure has no implementation of an array
   * [dynamic_reconfigure issue 67](https://github.com/ros/dynamic_reconfigure/issues/67)
