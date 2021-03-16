@@ -13,7 +13,7 @@ namespace motion_control
 {
   LaneControl::LaneControl(const rclcpp::NodeOptions &options)
     : Node("lane_control", options),
-    trigger_(false), centerX_{0.0}
+    trigger_(false), centerX_{0.0}, testPIDRun_{false}
   {
     // param
     parse_parameters();
@@ -22,14 +22,18 @@ namespace motion_control
         &LaneControl::dynamic_load_params, 
         this, std::placeholders::_1));
 
+    // set controller
+    pid_ctrl_ptr_ = std::make_shared<controller::PID>(
+      cfg_.ctrlTarget, cfg_.pid.kp, cfg_.pid.ki, cfg_.pid.kd);
+    
     // topic
     lane_center_sub_ = create_subscription<std_msgs::msg::Float64>(
       "lane_center_x",
-      10,
+      1,
       std::bind(&LaneControl::lane_callback, this, std::placeholders::_1));
     
     cmd_vel_pub_ = create_publisher<geometry_msgs::msg::Twist>(
-      "cmd_vel", 10);
+      "cmd_vel", 1);
 
     // timer
     clock_ = rclcpp::Clock(RCL_ROS_TIME);
@@ -40,19 +44,103 @@ namespace motion_control
       std::chrono::milliseconds(40),
       std::bind(&LaneControl::run, this));
 
+    // shutdown stop robot
+    rclcpp::on_shutdown(std::bind(&LaneControl::stop_control, this));
     // RCLCPP_INFO(this->get_logger(),"INIT");
   }
 
   void LaneControl::parse_parameters()
   {
-    pid_ctrl_ptr_ = std::make_shared<controller::PID>(
-      cfg_.ctrlTarget, cfg_.pid.kp, cfg_.pid.ki, cfg_.pid.kd);
+    // test PID param
+    this->declare_parameter<bool>("test_pid_param", false);
+
+    get_parameter_or<bool>(
+      "test_pid_param",
+      testPIDRun_,
+      false);
+
+    // robot param
+    this->declare_parameter<double>("robot.maxLinearVel", 0.15);
+    this->declare_parameter<double>("robot.maxAngularVel", 2.0);
+
+    // pid 
+    this->declare_parameter<double>("pid.kp", 0.1);
+    this->declare_parameter<double>("pid.ki", 0);
+    this->declare_parameter<double>("pid.kd", 0);
+
+    get_parameter_or<double>(
+      "robot.maxLinearVel",
+      cfg_.maxLinearVel,
+      0.15);
+    
+    get_parameter_or<double>(
+      "robot.maxAngularVel",
+      cfg_.maxAngularVel,
+      2.0);
+
+    get_parameter_or<double>(
+      "pid.kp",
+      cfg_.pid.kp,
+      0.1);
+    
+    get_parameter_or<double>(
+      "pid.ki",
+      cfg_.pid.ki,
+      0.0);
+    
+    get_parameter_or<double>(
+      "pid.kd",
+      cfg_.pid.kd,
+      0.0);
   }
 
   rcl_interfaces::msg::SetParametersResult LaneControl::dynamic_load_params(
     const std::vector<rclcpp::Parameter> &params)
   {
-    
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true;
+    result.reason = "success";
+
+    for(const auto &param : params)
+    {
+      if(param.get_name() == "robot.maxLinearVel" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+      {
+        cfg_.maxLinearVel = param.as_double();
+      }else if(param.get_name() == "robot.maxAngularVel" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+      {
+        cfg_.maxAngularVel = param.as_double();
+      }else if(param.get_name() == "pid.kp" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+      {
+        cfg_.pid.kp = param.as_double();
+        pid_ctrl_ptr_->set_kp(cfg_.pid.kp);
+      }else if(param.get_name() == "pid.ki" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+      {
+        cfg_.pid.ki = param.as_double();
+        pid_ctrl_ptr_->set_ki(cfg_.pid.ki);
+      }else if(param.get_name() == "pid.kd" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+      {
+        cfg_.pid.kd = param.as_double();
+        pid_ctrl_ptr_->set_kd(cfg_.pid.kd);
+      }else if(param.get_name() == "test_pid_param" &&
+        param.get_type() == rclcpp::ParameterType::PARAMETER_BOOL)
+      {
+        testPIDRun_ = param.as_bool();
+        if(!testPIDRun_){
+          pid_ctrl_ptr_->reset();
+          stop_control();
+        }
+      }else{
+        result.successful = false;
+        result.reason = "not found param";
+      }
+    }
+
+    return result;
   }
 
   void LaneControl::lane_callback(const std_msgs::msg::Float64::SharedPtr msg)
@@ -69,10 +157,17 @@ namespace motion_control
     rclcpp::Duration duration{clock_.now() - prevTime_};
     double delta{duration.seconds()};
 
-    double pidValue{pid_ctrl_ptr_->run(state, delta)};
+    double turn{pid_ctrl_ptr_->run(state, delta)};
+    turn /= 100.0;
     RobotVel robotVel{0.0, 0.0};
 
     // design control
+    robotVel.linearX = cfg_.maxLinearVel*(1 - std::abs(turn));
+    // robotVel.linearX = (robotVel.linearX < 0.2)? 0.2 : robotVel.linearX;
+    robotVel.angularZ = turn;
+
+    // RCLCPP_INFO(this->get_logger(),"pid value : %lf", turn);
+    RCLCPP_INFO(this->get_logger(),"robot vel : %lf %lf", robotVel.linearX, robotVel.angularZ);
 
     return robotVel;
   }
@@ -84,7 +179,7 @@ namespace motion_control
 
   void LaneControl::run()
   { 
-    if(trigger_)
+    if(trigger_ && testPIDRun_)
     {
       RobotVel robotVel{pid_controller(centerX_)};
       pub(robotVel);

@@ -17,6 +17,7 @@ from launch_ros.descriptions import ComposableNode
 def generate_launch_description():
 
   pkgsPath = FindPackageShare(["detect_object", "motion_control"])
+  use_sim_time = True
 
   container = ComposableNodeContainer(
     name='ComponentManager',
@@ -31,11 +32,13 @@ def generate_launch_description():
           os.path.join(
             pkgsPath.find("detect_object"),
             "config", "component", "detect_lane.yaml"),
-          {"use_sim_time": True}],
+          {"use_sim_time": use_sim_time}],
         name='detect_lane'),
       ComposableNode(
         package='motion_control',
         plugin='motion_control::LaneControl',
+        parameters=[
+          {"use_sim_time": use_sim_time}],
         name='lane_control')
     ],
     output='screen',

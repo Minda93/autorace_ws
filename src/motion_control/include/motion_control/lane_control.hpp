@@ -52,6 +52,8 @@ namespace motion_control
     double centerX_; // control error
     std::shared_ptr<controller::PID> pid_ctrl_ptr_;
 
+    bool testPIDRun_;
+
   }; // class LaneControl
   
 } // namespace motion_control
