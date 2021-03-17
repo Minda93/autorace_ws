@@ -48,7 +48,7 @@ namespace detect_object
     double normalize_lane_center(double centerX, const cv::Size imageSize);
     
     // topic
-    void pub(double centerX);
+    void pub_center_x(double centerX);
 
   private:
     // param
@@ -57,11 +57,11 @@ namespace detect_object
     
     cv::Mat yellowLaneFit_;
     std::vector<float> yellowLaneFitX_;
-    double yellowReliability_;
+    double yellowFraction_;
 
     cv::Mat whiteLaneFit_;
     std::vector<float> whiteLaneFitX_;
-    double whiteReliability_;
+    double whiteFraction_;
 
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr lane_center_pub_;
   };

@@ -42,8 +42,8 @@
           # src size(640, 480)
           bottom_x: 350
           bottom_y: 240
-          top_x: 90
-          top_y: -60
+          top_x: 180
+          top_y: -120
           
           # maybe add
           # dst size (250, 300)
@@ -54,10 +54,11 @@
       * param
       ```yaml
         mask_lane:
-          # cal none zero for mask 
-          # reliability = noneZero / excepted_value
-          # straight lane : the average value of none zero pixel is 2500 
-          expected_value: 2500.0
+          # calculate none zero pixel of the mask  
+          # fraction = noneZero pixel
+          # straight lane : the average value of none zero pixel is 3000
+          # accepted min none zero pixel 
+          expected_value: 450.0
         hsv_model:
           white:
             hue_h: 41
@@ -101,7 +102,6 @@
         #   datumY: 150
         #   # centerX - (dst_cols / 2)
         #   normalize: 124
-        #   line_reliability: 0.15
       ```  
       
 # TODO  

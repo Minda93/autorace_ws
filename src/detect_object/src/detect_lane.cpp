@@ -19,7 +19,7 @@ namespace detect_object
 {
   DetectLane::DetectLane(const rclcpp::NodeOptions &options)
     : Image("detect_lane", options),
-    yellowReliability_{0.0}, whiteReliability_{0.0}
+    yellowFraction_{0.0}, whiteFraction_{0.0}
   {
     // param
     parse_parameters();
@@ -306,13 +306,15 @@ namespace detect_object
   {
     std::vector<cv::Point2f> nonzero;
     cv::findNonZero(maskYellow, nonzero);
-
-    yellowReliability_ = (!nonzero.empty())? (static_cast<double>(nonzero.size()) / cfg_.expectedValue) : 0.0;
+    yellowFraction_ = static_cast<double>(nonzero.size());
 
     nonzero.clear();
     cv::findNonZero(maskWhite, nonzero);
+    whiteFraction_ = static_cast<double>(nonzero.size());
 
-    whiteReliability_ = (!nonzero.empty())? (static_cast<double>(nonzero.size()) / cfg_.expectedValue) : 0.0;
+    // future add (adjust datumY)
+    // yellowFraction_ = (!nonzero.empty())? (static_cast<double>(nonzero.size()) / cfg_.expectedValue) : 0.0;
+    // whiteFraction_ = (!nonzero.empty())? (static_cast<double>(nonzero.size()) / cfg_.expectedValue) : 0.0;
   }
 
   void DetectLane::sliding_window(const cv::Mat &src, const std::string &left_or_right, cv::Mat &dst)
@@ -467,41 +469,49 @@ namespace detect_object
     int datumY{150};
 
     // draw lane
-    // if(!yellowLaneFitX_.empty())
-    // {
-    //   std::vector<cv::Point> points;
-    //   for(size_t y{0}; y < dst.rows; ++y){
-    //     points.push_back(cv::Point{yellowLaneFitX_[y], y});
-    //   }
-    //   cv::polylines(dst, points, false, cv::Scalar(0, 0, 255), 5);
-    // }
+    if(!yellowLaneFitX_.empty())
+    {
+      std::vector<cv::Point> points;
+      for(size_t y{0}; y < dst.rows; ++y){
+        points.push_back(cv::Point{yellowLaneFitX_[y], y});
+      }
+      cv::polylines(dst, points, false, cv::Scalar(0, 0, 255), 5);
+    }
 
-    // if(!whiteLaneFitX_.empty())
-    // {
-    //   std::vector<cv::Point> points;
-    //   for(size_t y{0}; y < dst.rows; ++y){
-    //     points.push_back(cv::Point{whiteLaneFitX_[y], y});
-    //   }
-    //   cv::polylines(dst, points, false, cv::Scalar(255, 0, 0), 5);
-    // }
+    if(!whiteLaneFitX_.empty())
+    {
+      std::vector<cv::Point> points;
+      for(size_t y{0}; y < dst.rows; ++y){
+        points.push_back(cv::Point{whiteLaneFitX_[y], y});
+      }
+      cv::polylines(dst, points, false, cv::Scalar(255, 0, 0), 5);
+    }
 
     if(!yellowLaneFitX_.empty() || !whiteLaneFitX_.empty())
     {
-      if(yellowReliability_ > 0.15 && whiteReliability_ > 0.15)
+      if(yellowFraction_ > cfg_.expectedValue && whiteFraction_ > cfg_.expectedValue)
       {
-        double centerX{(yellowLaneFitX_[datumY] + whiteLaneFitX_[datumY]) / 2.0};
-        double normCenterX{normalize_lane_center(centerX, dst.size())};
-        pub(normCenterX);
-      }else if(yellowReliability_ <= 0.15 && whiteReliability_ > 0.15)
+        if(yellowLaneFitX_[datumY] < whiteLaneFitX_[datumY])
+        {
+          double centerX{(yellowLaneFitX_[datumY] + whiteLaneFitX_[datumY]) / 2.0};
+          double normCenterX{normalize_lane_center(centerX, dst.size())};
+          pub_center_x(normCenterX);
+        }else if(yellowLaneFitX_[datumY] >= whiteLaneFitX_[datumY])
+        {
+          double centerX = yellowLaneFitX_[datumY] + (static_cast<double>(dst.cols) / 2.0);
+          double normCenterX{normalize_lane_center(centerX, dst.size())};
+          pub_center_x(normCenterX); 
+        } 
+      }else if(yellowFraction_ <= cfg_.expectedValue && whiteFraction_ > cfg_.expectedValue)
       {
         double centerX = whiteLaneFitX_[datumY] - (static_cast<double>(dst.cols) / 2.0);
         double normCenterX{normalize_lane_center(centerX, dst.size())};
-        pub(normCenterX);
-      }else if(yellowReliability_ > 0.15 && whiteReliability_ <= 0.15)
+        pub_center_x(normCenterX);
+      }else if(yellowFraction_ > cfg_.expectedValue && whiteFraction_ <= cfg_.expectedValue)
       {
         double centerX = yellowLaneFitX_[datumY] + (static_cast<double>(dst.cols) / 2.0);
         double normCenterX{normalize_lane_center(centerX, dst.size())};
-        pub(normCenterX); 
+        pub_center_x(normCenterX); 
       }
     }
   }
@@ -578,7 +588,7 @@ namespace detect_object
     return normCenterX;
   }
 
-  void DetectLane::pub(double centerX)
+  void DetectLane::pub_center_x(double centerX)
   {
     auto msg = std::make_unique<std_msgs::msg::Float64>();
     msg->data = centerX;
@@ -595,14 +605,14 @@ namespace detect_object
     mask_lane(birdView, maskYellow, maskWhite);
     cal_line_reliability(maskYellow, maskWhite);
     
-    if(yellowReliability_ <= 0.15 || yellowLaneFitX_.empty())
+    if(yellowFraction_ <= cfg_.expectedValue || yellowLaneFitX_.empty())
     {
       sliding_window(maskYellow, "left", birdView);
     }else{
       line_fitting(maskYellow, yellowLaneFit_, yellowLaneFitX_, birdView);
     }
 
-    if(whiteReliability_ <= 0.15 || whiteLaneFitX_.empty())
+    if(whiteFraction_ <= cfg_.expectedValue || whiteLaneFitX_.empty())
     {
       sliding_window(maskWhite, "right", birdView);
     }else{

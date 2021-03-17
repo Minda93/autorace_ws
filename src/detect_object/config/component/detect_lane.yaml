@@ -1,8 +1,8 @@
 birdView.bottom_x: 350
 birdView.bottom_y: 240
-birdView.top_x: 90
-birdView.top_y: -60
-mask_lane.expected_value: 2500.0
+birdView.top_x: 180
+birdView.top_y: -120
+mask_lane.expected_value: 450.0
 hsv_model.white.hue_h: 41
 hsv_model.white.hue_l: 0
 hsv_model.white.saturation_h: 18
