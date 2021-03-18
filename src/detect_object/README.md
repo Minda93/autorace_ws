@@ -122,6 +122,14 @@
     - [ ] Lane-line pixel identification
     - [ ] make_lane
     - [ ] maybe use thread
+
+* detect_sign
+  - [ ] deep learning
+    - [ ] TensorFlow 2.4
+    - [ ] model (maybe use SSD series)
+
+* detect_construction 
+  
 # Issue  
 * rqt_gui dynamic_reconfigure has no implementation of an array
   * [dynamic_reconfigure issue 67](https://github.com/ros/dynamic_reconfigure/issues/67)

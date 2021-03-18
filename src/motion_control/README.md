@@ -12,6 +12,7 @@
 
 # 1. motion_control plugins  
 * lane_control
+* construction_control
 
 # 2. lane_control  
 * method
@@ -24,8 +25,25 @@
 * parameter
   * PID
   ```yaml
+    pid:
+      kd: 0.1
+      ki: 0.0
+      kp: 0.28
+    robot:
+      # robot angular max vel
+      maxAngularVel: 2.0
+
+      # robot linear max vel
+      maxLinearVel: 0.15
+    
+    # reset pid and stop robot (switch)
+    test_pid_param: false
   ```
 
 # TODO  
+* lane_control
+  - [ ] center_x cal adjust at the detect_lane plugin
+
+*  
 
 # Reference  
