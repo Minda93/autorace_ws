@@ -38,6 +38,9 @@ def generate_launch_description():
         package='motion_control',
         plugin='motion_control::LaneControl',
         parameters=[
+          os.path.join(
+            pkgsPath.find("motion_control"),
+            "config", "component", "lane_control.yaml"),
           {"use_sim_time": use_sim_time}],
         name='lane_control')
     ],

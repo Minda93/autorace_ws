@@ -1,0 +1,10 @@
+detect_lane:
+  ros__parameters:
+    pid:
+      kd: 0.1
+      ki: 0.0
+      kp: 0.28
+    robot:
+      maxAngularVel: 2.0
+      maxLinearVel: 0.15
+    test_pid_param: false

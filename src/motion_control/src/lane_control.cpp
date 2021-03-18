@@ -167,7 +167,7 @@ namespace motion_control
     robotVel.angularZ = turn;
 
     // RCLCPP_INFO(this->get_logger(),"pid value : %lf", turn);
-    RCLCPP_INFO(this->get_logger(),"robot vel : %lf %lf", robotVel.linearX, robotVel.angularZ);
+    // RCLCPP_INFO(this->get_logger(),"robot vel : %lf %lf", robotVel.linearX, robotVel.angularZ);
 
     return robotVel;
   }
