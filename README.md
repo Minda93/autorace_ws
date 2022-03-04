@@ -10,7 +10,9 @@
 <!-- /TOC -->
 
 # autorace_ws
-ros2 practice 2 
+ros2 practice 2 [fail]
+
+turtlebot3_custom file lost
 
 # 1. Environment
 
